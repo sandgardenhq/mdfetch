@@ -118,12 +118,12 @@ npm init -y
 
 2. Install production dependencies:
 ```bash
-npm install @mozilla/readability jsdom turndown turndown-plugin-gfm commander
+npm install @mozilla/readability linkedom turndown turndown-plugin-gfm commander
 ```
 
 3. Install development dependencies:
 ```bash
-npm install -D typescript @types/node @types/jsdom @types/turndown tsx vitest @vitest/ui c8 msw happy-dom
+npm install -D typescript @types/node @types/turndown tsx vitest @vitest/ui c8 msw
 ```
 
 4. Create `tsconfig.json`:
@@ -653,7 +653,7 @@ describe('extractContent', () => {
 
 ```typescript
 import { Readability } from '@mozilla/readability';
-import { JSDOM } from 'jsdom';
+import { parseHTML } from 'linkedom';
 import { Article, ReaderOptions } from './types.js';
 
 export class ExtractionError extends Error {
@@ -667,11 +667,9 @@ export function extractContent(
   html: string,
   options: ReaderOptions
 ): Article {
-  const dom = new JSDOM(html, {
-    url: options.url,
-  });
+  const { document } = parseHTML(html);
 
-  const reader = new Readability(dom.window.document);
+  const reader = new Readability(document);
   const article = reader.parse();
 
   if (!article) {

@@ -106,16 +106,46 @@ Format:
 - Notes: [any relevant notes]
 ```
 
-### 9. Git Commits
+### 9. Git Commits - Commit Early, Commit Often
 
-- Only commit code that:
-  - Has failing tests written first
-  - Passes all tests
-  - Builds successfully
-  - Has no linter errors
-  - Meets coverage requirements
-  - Has progress documented
-- Commit message MUST mention TDD implementation
+**MANDATORY RULE**: COMMIT EARLY, COMMIT OFTEN
+
+- **Commit after EACH successful TDD cycle**:
+  - ✅ After RED-GREEN-REFACTOR cycle completes
+  - ✅ After each test file is created
+  - ✅ After each module implementation
+  - ✅ After fixing bugs or issues
+  - ✅ After updating documentation
+
+- **Frequency Requirements**:
+  - Minimum: After each completed subtask
+  - Maximum: No more than 30 minutes without a commit
+  - Never have more than one feature in a single commit
+
+- **Each commit MUST**:
+  - Have failing tests written first
+  - Pass all tests
+  - Build successfully
+  - Have no linter errors
+  - Meet coverage requirements (if code was added)
+  - Have progress documented
+  - Include clear commit message mentioning TDD
+
+- **Commit Message Format**:
+  ```
+  type(scope): brief description
+
+  - RED: What tests were written first
+  - GREEN: What minimal code was added
+  - Status: X tests passing, build successful
+  - Coverage: X% (if applicable)
+  ```
+
+- **Benefits of Frequent Commits**:
+  - Easy rollback if something breaks
+  - Clear history of TDD progression
+  - Smaller, reviewable changes
+  - Proof of TDD discipline
 
 ## Development Workflow
 

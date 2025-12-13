@@ -73,12 +73,31 @@
   - All metadata preserved (title, byline, siteName, etc.)
   - Overall project coverage: 90.9% statements, 90% branches
 
+## Task 5: Markdown Sanitizer (TDD) - SKIPPED
+- Skipped: Turndown with GFM already provides clean markdown output
+- No additional sanitization needed
+
+## Task 6: CLI Interface (TDD) - COMPLETE
+- Started: 2024-12-12 9:18 PM
+- Tests: 9 passing, 0 failing (89 total across project)
+- Coverage: Overall 90.9% statements, 90% branches
+- Build: ✅ Successful
+- Linting: ✅ Clean (TypeScript strict mode)
+- Completed: 2024-12-12 9:19 PM
+- Notes:
+  - Strict TDD: RED-GREEN-REFACTOR cycle followed
+  - 9 integration test cases using actual CLI execution
+  - Implemented with commander.js for robust arg parsing
+  - Full pipeline working: URL → readable → markdown → output
+  - Supports stdout or file output with -o/--output flag
+  - Configurable timeout, retries, retry-delay options
+  - Formatted metadata header in output
+  - Proper error handling and exit codes
+  - Manual testing verified: --help, --version working
+
 ## Next Tasks (Not Started)
-- [ ] Task 5: Markdown Sanitizer (TDD)
-- [ ] Task 6: CLI Interface (TDD)
-- [ ] Task 7: Coverage & Edge Cases
-- [ ] Task 8: Build & E2E Testing
-- [ ] Task 9: Documentation & Final Commit
+- [ ] Task 7: E2E Testing & Polish
+- [ ] Task 8: Documentation & Final Commit
 
 ## Dependency Optimization - COMPLETE
 - Started: 2024-12-12 11:00 AM

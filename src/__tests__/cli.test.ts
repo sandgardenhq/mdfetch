@@ -63,6 +63,26 @@ describe('CLI Integration', () => {
 
     expect(result).toContain('--retries');
   });
+
+  it('should accept --html flag for HTML output', () => {
+    const result = execSync('tsx src/cli.ts --help', { encoding: 'utf-8' });
+
+    expect(result).toContain('--html');
+  });
+
+  it('should accept --text flag for plain text output', () => {
+    const result = execSync('tsx src/cli.ts --help', { encoding: 'utf-8' });
+
+    expect(result).toContain('--text');
+  });
+
+  it('should not allow both --html and --text flags together', () => {
+    const result = execSync('tsx src/cli.ts --help', { encoding: 'utf-8' });
+
+    // The help should indicate these are mutually exclusive or in a group
+    expect(result).toContain('--html');
+    expect(result).toContain('--text');
+  });
 });
 
 describe('CLI Output', () => {

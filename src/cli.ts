@@ -18,6 +18,8 @@ program
   .version(packageJson.version)
   .argument('<url>', 'URL of the web page to convert')
   .option('-o, --output <file>', 'Output file path (defaults to stdout)')
+  .option('--html', 'Output readable HTML instead of markdown')
+  .option('--text', 'Output plain text instead of markdown')
   .option('--timeout <ms>', 'Request timeout in milliseconds', '30000')
   .option('--retries <count>', 'Number of retry attempts', '3')
   .option('--retry-delay <ms>', 'Delay between retries in milliseconds', '1000')
@@ -30,12 +32,28 @@ program
         retryDelay: parseInt(options.retryDelay)
       };
 
+      // Check for conflicting flags
+      if (options.html && options.text) {
+        console.error('Error: Cannot use both --html and --text flags together');
+        process.exit(1);
+      }
+
       // Fetch and convert the URL
       console.error(`Fetching ${url}...`);
       const result = await readURL(url, readerOptions);
 
-      // Prepare markdown output with metadata header
-      const output = `# ${result.title}
+      // Determine output format
+      let output: string;
+
+      if (options.html) {
+        // Output readable HTML
+        output = result.readableHTML;
+      } else if (options.text) {
+        // Output plain text
+        output = result.plainText;
+      } else {
+        // Default: output markdown with metadata header
+        output = `# ${result.title}
 
 ${result.byline ? `**By:** ${result.byline}\n` : ''}${result.siteName ? `**Source:** ${result.siteName}\n` : ''}${result.publishedTime ? `**Published:** ${result.publishedTime}\n` : ''}**URL:** ${result.url}
 
@@ -43,6 +61,7 @@ ${result.byline ? `**By:** ${result.byline}\n` : ''}${result.siteName ? `**Sourc
 
 ${result.markdown}
 `;
+      }
 
       // Write to file or stdout
       if (options.output) {

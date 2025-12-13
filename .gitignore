@@ -9,9 +9,6 @@ dist/
 coverage/
 *.lcov
 
-# Documentation
-docs/
-
 # Logs
 *.log
 npm-debug.log*
@@ -40,3 +37,5 @@ Thumbs.db
 !IMPLEMENTATION_PLAN.md
 !PROGRESS.md
 !CHANGELOG.md
+!API_DOCUMENTATION.md
+!TASKS_7_8_PLAN.md

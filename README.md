@@ -268,11 +268,7 @@ doc-reader/
 - `vitest` - Fast unit testing
 - `typedoc` - API documentation generation
 
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-### Development Workflow
+## Development Workflow
 
 This project follows strict TDD (Test-Driven Development):
 
@@ -282,10 +278,6 @@ This project follows strict TDD (Test-Driven Development):
 4. Maintain 90%+ test coverage
 
 See [CLAUDE.md](CLAUDE.md) for detailed development rules.
-
-## License
-
-MIT
 
 ## Credits
 

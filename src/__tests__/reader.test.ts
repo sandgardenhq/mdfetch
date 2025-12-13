@@ -226,6 +226,38 @@ describe('reader', () => {
       await expect(readURL('https://example.com')).rejects.toThrow('Failed to extract readable content');
     });
 
+    it('should throw ReaderError when makeReadable returns null', async () => {
+      const mockHTML = '<html><body>Content</body></html>';
+
+      const { fetchHTML } = await import('../fetcher');
+      vi.mocked(fetchHTML).mockResolvedValue(mockHTML);
+
+      const { makeReadable, makeImgPathsAbsolute, makeLinksAbsolute } = await import('../readable');
+      vi.mocked(makeImgPathsAbsolute).mockReturnValue(mockHTML);
+      vi.mocked(makeLinksAbsolute).mockReturnValue(mockHTML);
+      vi.mocked(makeReadable).mockReturnValue(null);
+
+      await expect(readURL('https://example.com')).rejects.toThrow(ReaderError);
+      await expect(readURL('https://example.com')).rejects.toThrow('Failed to fetch URL: Failed to extract article');
+    });
+
+    it('should handle non-Error objects thrown during processing', async () => {
+      const mockHTML = '<html><body>Content</body></html>';
+
+      const { fetchHTML } = await import('../fetcher');
+      vi.mocked(fetchHTML).mockResolvedValue(mockHTML);
+
+      const { makeReadable, makeImgPathsAbsolute, makeLinksAbsolute } = await import('../readable');
+      vi.mocked(makeImgPathsAbsolute).mockReturnValue(mockHTML);
+      vi.mocked(makeLinksAbsolute).mockReturnValue(mockHTML);
+      vi.mocked(makeReadable).mockImplementation(() => {
+        throw 'String error'; // Non-Error object
+      });
+
+      await expect(readURL('https://example.com')).rejects.toThrow(ReaderError);
+      await expect(readURL('https://example.com')).rejects.toThrow('An unknown error occurred');
+    });
+
     it('should handle code blocks in markdown conversion', async () => {
       const mockHTML = '<html><body><article><pre><code>const x = 1;</code></pre></article></body></html>';
 

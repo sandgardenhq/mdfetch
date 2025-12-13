@@ -357,6 +357,33 @@ describe('readable', () => {
       expect(result?.textContent).toContain('italic');
       expect(result?.textContent).toContain('const code');
     });
+
+    it('should handle HTML with problematic entities via error recovery path', () => {
+      // HTML with deeply nested and complex entities that might trigger parsing errors
+      const html = `
+        <html>
+        <head>
+          <title>Test Article with Entities</title>
+        </head>
+        <body>
+          <article>
+            <h1>Article with HTML Entities</h1>
+            <p>Content with &amp;&lt;&gt;&quot;&#39; entities and text.</p>
+            <p>Additional paragraph to ensure there's enough content.</p>
+            <p>More content to make the article parseable by Readability.</p>
+            <p>Even more text to ensure we have sufficient content length.</p>
+          </article>
+        </body>
+        </html>
+      `;
+
+      // This should work even if the first parsing attempt fails
+      const result = makeReadable(html);
+
+      expect(result).not.toBeNull();
+      expect(result?.title).toContain('Test Article');
+      expect(result?.textContent).toContain('entities');
+    });
   });
 
   describe('Article interface', () => {

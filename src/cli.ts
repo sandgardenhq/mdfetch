@@ -13,7 +13,7 @@ const packageJson = JSON.parse(
 );
 
 program
-  .name('doc-reader')
+  .name('mdfetch')
   .description('CLI tool to convert web pages to clean markdown')
   .version(packageJson.version)
   .argument('<url>', 'URL of the web page to convert')

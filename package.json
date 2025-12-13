@@ -4,7 +4,7 @@
   "description": "CLI tool to convert web pages to clean markdown",
   "type": "module",
   "bin": {
-    "doc-reader": "./dist/cli.js"
+    "mdfetch": "./dist/cli.js"
   },
   "scripts": {
     "test": "vitest",

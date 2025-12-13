@@ -1,3 +1,39 @@
+/**
+ * Main orchestration module for web page to markdown conversion.
+ *
+ * This is the primary entry point for the mdfetch library. It combines all the
+ * individual components (HTTP fetching, content extraction, markdown conversion)
+ * into a single, easy-to-use pipeline.
+ *
+ * The main function {@link readURL} handles the complete workflow:
+ * 1. Fetches HTML from the provided URL (with retries and timeout)
+ * 2. Converts all relative URLs to absolute URLs
+ * 3. Extracts readable content using Mozilla Readability
+ * 4. Converts the content to markdown using Turndown with GitHub Flavored Markdown
+ * 5. Returns content in all three formats (HTML, text, markdown) with metadata
+ *
+ * @module reader
+ *
+ * @example
+ * ```typescript
+ * import { readURL } from 'mdfetch';
+ *
+ * // Basic usage
+ * const result = await readURL('https://example.com/article');
+ * console.log(result.title);        // "Article Title"
+ * console.log(result.markdown);     // "# Article Title\n\nContent..."
+ * console.log(result.plainText);    // "Article Title Content..."
+ * console.log(result.byline);       // "John Doe"
+ *
+ * // With custom options
+ * const result = await readURL('https://slow-site.com/article', {
+ *   timeout: 60000,
+ *   retries: 5,
+ *   retryDelay: 2000
+ * });
+ * ```
+ */
+
 import { fetchHTML } from './fetcher.js';
 import { makeReadable, makeImgPathsAbsolute, makeLinksAbsolute } from './readable.js';
 import type { ReaderOptions, ConversionResult } from './types.js';

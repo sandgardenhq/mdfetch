@@ -1,3 +1,31 @@
+/**
+ * HTTP fetching module with retry logic and timeout protection.
+ *
+ * This module provides robust HTTP fetching capabilities with built-in retry logic,
+ * exponential backoff, timeout handling, and content type validation. It's designed
+ * to handle unreliable networks and flaky servers gracefully.
+ *
+ * @module fetcher
+ *
+ * @example
+ * ```typescript
+ * import { fetchHTML, FetchError } from 'mdfetch/fetcher';
+ *
+ * try {
+ *   const html = await fetchHTML('https://example.com/article', {
+ *     timeout: 60000,
+ *     retries: 5,
+ *     retryDelay: 2000
+ *   });
+ *   console.log('Fetched', html.length, 'bytes');
+ * } catch (error) {
+ *   if (error instanceof FetchError) {
+ *     console.error('HTTP Error:', error.statusCode, error.message);
+ *   }
+ * }
+ * ```
+ */
+
 import { FetchOptions } from './types.js';
 
 const DEFAULT_TIMEOUT = 30000; // 30 seconds

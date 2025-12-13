@@ -1,3 +1,35 @@
+/**
+ * Content extraction and URL normalization module.
+ *
+ * This module provides utilities for extracting readable article content from HTML
+ * using Mozilla's Readability algorithm, and for converting relative URLs to absolute
+ * URLs. It handles the DOM parsing and manipulation needed to prepare content for
+ * markdown conversion.
+ *
+ * The main function, {@link makeReadable}, combines Mozilla Readability with linkedom
+ * (a lightweight DOM implementation) to extract clean article content from messy HTML.
+ *
+ * @module readable
+ *
+ * @example
+ * ```typescript
+ * import { makeReadable, makeImgPathsAbsolute, makeLinksAbsolute } from 'mdfetch/readable';
+ *
+ * // Fetch HTML from somewhere
+ * const html = '<html><body><article><h1>Title</h1><p>Content</p></article></body></html>';
+ *
+ * // Make URLs absolute
+ * const withAbsoluteImages = makeImgPathsAbsolute('https://example.com', html);
+ * const withAbsoluteLinks = makeLinksAbsolute('https://example.com', withAbsoluteImages);
+ *
+ * // Extract readable content
+ * const article = makeReadable(withAbsoluteLinks);
+ * console.log(article.title);       // "Title"
+ * console.log(article.content);     // "<h1>Title</h1><p>Content</p>"
+ * console.log(article.textContent); // "Title Content"
+ * ```
+ */
+
 import { DOMParser, parseHTML } from 'linkedom'
 import { Readability } from '@mozilla/readability'
 

@@ -1,4 +1,25 @@
 /**
+ * Type definitions for the mdfetch library.
+ *
+ * This module contains all TypeScript interfaces and type definitions used throughout
+ * the mdfetch library. It defines the structure of configuration options, article data,
+ * and conversion results.
+ *
+ * @module types
+ *
+ * @example
+ * ```typescript
+ * import type { ConversionResult, ReaderOptions, Article } from 'mdfetch';
+ *
+ * // Use types for function parameters and return values
+ * async function processArticle(url: string, options: ReaderOptions): Promise<ConversionResult> {
+ *   const result = await readURL(url, options);
+ *   return result;
+ * }
+ * ```
+ */
+
+/**
  * Options for fetching HTML content from URLs.
  */
 export interface FetchOptions {

@@ -5,16 +5,31 @@
   "exclude": [
     "**/__tests__/**",
     "**/*.test.ts",
-    "**/node_modules/**"
+    "**/node_modules/**",
+    "**/cli.ts"
   ],
   "excludePrivate": true,
   "excludeInternal": true,
   "excludeExternals": true,
   "includeVersion": true,
-  "readme": "none",
+  "readme": "API_DOCUMENTATION.md",
   "plugin": [],
   "name": "mdfetch API Documentation",
   "navigationLinks": {
     "GitHub": "https://github.com/anthropics/mdfetch"
-  }
+  },
+  "sort": ["source-order"],
+  "categorizeByGroup": true,
+  "defaultCategory": "Core",
+  "categoryOrder": ["Core", "Types", "Utilities", "*"],
+  "lightHighlightTheme": "light-plus",
+  "darkHighlightTheme": "dark-plus",
+  "highlightLanguages": [
+    "typescript",
+    "javascript",
+    "json",
+    "bash",
+    "markdown",
+    "html"
+  ]
 }

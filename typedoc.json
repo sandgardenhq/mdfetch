@@ -13,8 +13,8 @@
   "includeVersion": true,
   "readme": "none",
   "plugin": [],
-  "name": "doc-reader API Documentation",
+  "name": "mdfetch API Documentation",
   "navigationLinks": {
-    "GitHub": "https://github.com/anthropics/doc-reader"
+    "GitHub": "https://github.com/anthropics/mdfetch"
   }
 }

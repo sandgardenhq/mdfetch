@@ -32,7 +32,7 @@ export class ReaderError extends Error {
 /**
  * Reads a URL and converts it to readable HTML, plain text, and markdown.
  *
- * This is the main entry point for the doc-reader library. It orchestrates
+ * This is the main entry point for the mdfetch library. It orchestrates
  * the complete pipeline:
  * 1. Fetches HTML from the URL
  * 2. Makes all image and link paths absolute

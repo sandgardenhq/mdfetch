@@ -1112,7 +1112,7 @@ import { CliOptions } from './types.js';
 const program = new Command();
 
 program
-  .name('doc-reader')
+  .name('mdfetch')
   .description('Convert web pages to clean markdown')
   .version('1.0.0')
   .argument('<url>', 'URL of the web page to convert')

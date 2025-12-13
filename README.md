@@ -19,7 +19,7 @@ Convert any web article into clean markdown with a single command. Uses Mozilla'
 ### Global Installation (Recommended)
 
 ```bash
-npm install -g doc-reader
+npm install -g mdfetch
 ```
 
 This installs the `mdfetch` command globally.
@@ -27,7 +27,7 @@ This installs the `mdfetch` command globally.
 ### Local Installation
 
 ```bash
-npm install doc-reader
+npm install mdfetch
 ```
 
 Then use via npx:
@@ -133,10 +133,10 @@ mdfetch https://example.com/article | less
 
 ## Library Usage
 
-You can also use `doc-reader` as a library in your Node.js projects:
+You can also use `mdfetch` as a library in your Node.js projects:
 
 ```typescript
-import { readURL } from 'doc-reader';
+import { readURL } from 'mdfetch';
 
 // Fetch and convert a URL
 const result = await readURL('https://example.com/article');
@@ -209,8 +209,8 @@ The tool includes robust error handling:
 ### Setup
 
 ```bash
-git clone https://github.com/yourusername/doc-reader.git
-cd doc-reader
+git clone https://github.com/yourusername/mdfetch.git
+cd mdfetch
 npm install
 ```
 
@@ -241,7 +241,7 @@ npm test
 ### Project Structure
 
 ```
-doc-reader/
+mdfetch/
 ├── src/
 │   ├── cli.ts           # CLI entry point
 │   ├── reader.ts        # Main library function

@@ -1,4 +1,4 @@
-# Progress Report - doc-reader CLI
+# Progress Report - mdfetch CLI
 
 ## Task 0: Test Infrastructure Setup - COMPLETE
 - Started: 2024-12-12 10:45 AM

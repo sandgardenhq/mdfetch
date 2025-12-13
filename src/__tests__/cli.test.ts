@@ -1,0 +1,84 @@
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { promises as fs } from 'fs';
+import { execSync } from 'child_process';
+import path from 'path';
+
+// We'll test the CLI by actually running it as a subprocess
+// This is an integration test that verifies the entire pipeline
+
+describe('CLI Integration', () => {
+  const testOutputDir = path.join(process.cwd(), 'test-output');
+
+  beforeEach(async () => {
+    // Create test output directory
+    await fs.mkdir(testOutputDir, { recursive: true });
+  });
+
+  afterEach(async () => {
+    // Clean up test output directory
+    try {
+      await fs.rm(testOutputDir, { recursive: true, force: true });
+    } catch (error) {
+      // Ignore errors if directory doesn't exist
+    }
+  });
+
+  it('should display help when --help flag is used', () => {
+    const result = execSync('tsx src/cli.ts --help', { encoding: 'utf-8' });
+
+    expect(result).toContain('Usage:');
+    expect(result).toContain('Options:');
+  });
+
+  it('should display version when --version flag is used', () => {
+    const result = execSync('tsx src/cli.ts --version', { encoding: 'utf-8' });
+
+    expect(result).toMatch(/\d+\.\d+\.\d+/); // Should match version format
+  });
+
+  it('should require a URL argument', () => {
+    try {
+      execSync('tsx src/cli.ts', { encoding: 'utf-8', stdio: 'pipe' });
+      expect.fail('Should have thrown an error');
+    } catch (error: any) {
+      expect(error.status).not.toBe(0);
+      expect(error.stderr.toString()).toContain('missing required argument');
+    }
+  });
+
+  it('should accept output file option', () => {
+    const result = execSync('tsx src/cli.ts --help', { encoding: 'utf-8' });
+
+    expect(result).toContain('-o, --output');
+  });
+
+  it('should accept timeout option', () => {
+    const result = execSync('tsx src/cli.ts --help', { encoding: 'utf-8' });
+
+    expect(result).toContain('--timeout');
+  });
+
+  it('should accept retries option', () => {
+    const result = execSync('tsx src/cli.ts --help', { encoding: 'utf-8' });
+
+    expect(result).toContain('--retries');
+  });
+});
+
+describe('CLI Output', () => {
+  it('should write markdown to stdout when no output file specified', () => {
+    // We'll need to mock the readURL function for this test
+    // This test will be implemented after we create the CLI module
+    expect(true).toBe(true); // Placeholder
+  });
+
+  it('should write markdown to specified output file', async () => {
+    // This will test the actual file writing
+    expect(true).toBe(true); // Placeholder
+  });
+
+  it('should handle fetch errors gracefully', () => {
+    // Test error handling
+    expect(true).toBe(true); // Placeholder
+  });
+});

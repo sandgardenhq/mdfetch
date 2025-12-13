@@ -1,0 +1,110 @@
+name: Tests and Coverage
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Run Tests and Coverage
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x, 22.x]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run type checking
+        run: npm run typecheck
+
+      - name: Run tests with coverage
+        run: npm run test:coverage
+
+      - name: Upload coverage reports to Codecov
+        if: matrix.node-version == '20.x'
+        uses: codecov/codecov-action@v4
+        with:
+          fail_ci_if_error: false
+          files: ./coverage/coverage-final.json
+          flags: unittests
+          name: codecov-umbrella
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: Check coverage thresholds
+        if: matrix.node-version == '20.x'
+        run: |
+          echo "Verifying coverage meets 90% threshold..."
+          npm run test:coverage -- --reporter=json --outputFile=coverage-summary.json
+
+          # Extract coverage percentages
+          STATEMENTS=$(node -e "const data = require('./coverage/coverage-summary.json'); console.log(data.total.statements.pct);")
+          BRANCHES=$(node -e "const data = require('./coverage/coverage-summary.json'); console.log(data.total.branches.pct);")
+          FUNCTIONS=$(node -e "const data = require('./coverage/coverage-summary.json'); console.log(data.total.functions.pct);")
+          LINES=$(node -e "const data = require('./coverage/coverage-summary.json'); console.log(data.total.lines.pct);")
+
+          echo "Coverage Results:"
+          echo "  Statements: ${STATEMENTS}%"
+          echo "  Branches: ${BRANCHES}%"
+          echo "  Functions: ${FUNCTIONS}%"
+          echo "  Lines: ${LINES}%"
+
+          # Check if coverage meets thresholds (90% for statements, branches, lines, and 90% for functions)
+          if (( $(echo "$STATEMENTS < 90" | bc -l) )); then
+            echo "❌ Statement coverage (${STATEMENTS}%) is below 90%"
+            exit 1
+          fi
+
+          if (( $(echo "$BRANCHES < 85" | bc -l) )); then
+            echo "❌ Branch coverage (${BRANCHES}%) is below 85%"
+            exit 1
+          fi
+
+          if (( $(echo "$FUNCTIONS < 90" | bc -l) )); then
+            echo "❌ Function coverage (${FUNCTIONS}%) is below 90%"
+            exit 1
+          fi
+
+          if (( $(echo "$LINES < 90" | bc -l) )); then
+            echo "❌ Line coverage (${LINES}%) is below 90%"
+            exit 1
+          fi
+
+          echo "✅ All coverage thresholds met!"
+
+      - name: Build project
+        run: npm run build
+
+  lint:
+    name: Type Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run TypeScript compiler check
+        run: npm run typecheck

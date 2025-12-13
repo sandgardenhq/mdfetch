@@ -4,7 +4,22 @@ import type { ReaderOptions, ConversionResult } from './types.js';
 import TurndownService from 'turndown';
 import { gfm } from 'turndown-plugin-gfm';
 
+/**
+ * Custom error class for reader-related errors.
+ * Wraps errors that occur during the URL reading and conversion process.
+ *
+ * @example
+ * ```typescript
+ * throw new ReaderError('Failed to extract content', originalError);
+ * ```
+ */
 export class ReaderError extends Error {
+  /**
+   * Creates a new ReaderError.
+   *
+   * @param message - Error message describing what went wrong
+   * @param originalError - Original error that caused this error (if any)
+   */
   constructor(
     message: string,
     public originalError?: Error
@@ -15,10 +30,52 @@ export class ReaderError extends Error {
 }
 
 /**
- * Reads a URL and returns readable HTML, plain text, and markdown
- * @param url the URL to read
- * @param options optional fetch options (timeout, retries, retryDelay)
- * @returns ConversionResult with all three formats
+ * Reads a URL and converts it to readable HTML, plain text, and markdown.
+ *
+ * This is the main entry point for the doc-reader library. It orchestrates
+ * the complete pipeline:
+ * 1. Fetches HTML from the URL
+ * 2. Makes all image and link paths absolute
+ * 3. Extracts readable content using Mozilla Readability
+ * 4. Converts to markdown using Turndown with GitHub Flavored Markdown support
+ *
+ * Features:
+ * - Returns content in three formats: HTML, plain text, and markdown
+ * - Preserves all article metadata (title, author, published date, etc.)
+ * - Supports customizable timeout and retry behavior
+ * - Automatic URL resolution for embedded resources
+ * - GFM support: tables, code blocks, strikethrough, task lists
+ *
+ * @param url - The URL of the web page to read and convert
+ * @param options - Optional configuration for fetching and processing
+ * @param options.timeout - Request timeout in milliseconds (default: 30000)
+ * @param options.retries - Number of retry attempts (default: 3)
+ * @param options.retryDelay - Delay between retries in milliseconds (default: 1000)
+ *
+ * @returns Promise resolving to ConversionResult with content in all three formats
+ *
+ * @throws {ReaderError} When fetching fails, content cannot be extracted,
+ *                       or conversion encounters an error
+ *
+ * @example
+ * ```typescript
+ * // Basic usage
+ * const result = await readURL('https://example.com/article');
+ * console.log(result.markdown);     // Markdown version
+ * console.log(result.plainText);    // Plain text version
+ * console.log(result.readableHTML); // Clean HTML version
+ *
+ * // With custom options
+ * const result = await readURL('https://example.com/article', {
+ *   timeout: 60000,
+ *   retries: 5
+ * });
+ *
+ * // Access metadata
+ * console.log(result.title);        // Article title
+ * console.log(result.byline);       // Author
+ * console.log(result.publishedTime);// Publication date
+ * ```
  */
 export async function readURL(
   url: string,

@@ -1,0 +1,20 @@
+{
+  "entryPoints": ["src"],
+  "entryPointStrategy": "expand",
+  "out": "docs",
+  "exclude": [
+    "**/__tests__/**",
+    "**/*.test.ts",
+    "**/node_modules/**"
+  ],
+  "excludePrivate": true,
+  "excludeInternal": true,
+  "excludeExternals": true,
+  "includeVersion": true,
+  "readme": "none",
+  "plugin": [],
+  "name": "doc-reader API Documentation",
+  "navigationLinks": {
+    "GitHub": "https://github.com/anthropics/doc-reader"
+  }
+}

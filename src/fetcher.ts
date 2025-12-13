@@ -4,7 +4,23 @@ const DEFAULT_TIMEOUT = 30000; // 30 seconds
 const DEFAULT_RETRIES = 3;
 const DEFAULT_RETRY_DELAY = 1000; // 1 second
 
+/**
+ * Custom error class for fetch-related errors.
+ * Extends the base Error class with HTTP status code and original error tracking.
+ *
+ * @example
+ * ```typescript
+ * throw new FetchError('Request failed', 404);
+ * ```
+ */
 export class FetchError extends Error {
+  /**
+   * Creates a new FetchError.
+   *
+   * @param message - Error message describing what went wrong
+   * @param statusCode - HTTP status code (if applicable)
+   * @param originalError - Original error that caused this error (if any)
+   */
   constructor(
     message: string,
     public statusCode?: number,
@@ -44,6 +60,40 @@ async function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+/**
+ * Fetches HTML content from a URL with timeout and retry capabilities.
+ *
+ * Features:
+ * - Configurable timeout with automatic cancellation
+ * - Exponential backoff retry logic for transient failures
+ * - Content-type validation (expects HTML)
+ * - Automatic retry on 5xx errors, but not 4xx errors
+ * - User-agent header to avoid bot detection
+ *
+ * @param url - The URL to fetch HTML from
+ * @param options - Optional fetch configuration
+ * @param options.timeout - Request timeout in milliseconds (default: 30000)
+ * @param options.retries - Number of retry attempts (default: 3)
+ * @param options.retryDelay - Initial delay between retries in milliseconds (default: 1000)
+ *
+ * @returns Promise that resolves to the HTML content as a string
+ *
+ * @throws {FetchError} When the request fails after all retries, times out,
+ *                      or receives non-HTML content
+ *
+ * @example
+ * ```typescript
+ * // Basic usage
+ * const html = await fetchHTML('https://example.com');
+ *
+ * // With custom timeout and retries
+ * const html = await fetchHTML('https://example.com', {
+ *   timeout: 60000,
+ *   retries: 5,
+ *   retryDelay: 2000
+ * });
+ * ```
+ */
 export async function fetchHTML(
   url: string,
   options: FetchOptions = {}

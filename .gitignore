@@ -9,6 +9,9 @@ dist/
 coverage/
 *.lcov
 
+# Documentation
+docs/
+
 # Logs
 *.log
 npm-debug.log*

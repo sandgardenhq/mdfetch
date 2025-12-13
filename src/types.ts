@@ -4,8 +4,8 @@ export interface FetchOptions {
   retryDelay?: number;
 }
 
-export interface ReaderOptions {
-  url: string;
+export interface ReaderOptions extends FetchOptions {
+  // Inherits timeout, retries, retryDelay from FetchOptions
 }
 
 export interface Article {
@@ -33,12 +33,16 @@ export interface CliOptions {
 }
 
 export interface ConversionResult {
+  url: string;
+  title: string;
+  readableHTML: string;
+  plainText: string;
   markdown: string;
-  metadata: {
-    title: string;
-    author: string | null;
-    siteName: string | null;
-    url: string;
-    extractedAt: string;
-  };
+  excerpt: string;
+  byline: string;
+  siteName: string;
+  lang: string;
+  dir: string;
+  publishedTime: string;
+  length: number;
 }

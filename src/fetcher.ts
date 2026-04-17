@@ -105,13 +105,14 @@ async function sleep(ms: number): Promise<void> {
  * - Exponential backoff retry logic for transient failures
  * - Content-type validation (expects HTML)
  * - Automatic retry on 5xx errors, but not 4xx errors
- * - User-agent header to avoid bot detection
+ * - Self-identifying User-Agent header (customizable via options.userAgent)
  *
  * @param url - The URL to fetch HTML from
  * @param options - Optional fetch configuration
  * @param options.timeout - Request timeout in milliseconds (default: 30000)
  * @param options.retries - Number of retry attempts (default: 3)
  * @param options.retryDelay - Initial delay between retries in milliseconds (default: 1000)
+ * @param options.userAgent - Custom User-Agent header (default: DEFAULT_USER_AGENT)
  *
  * @returns Promise that resolves to the HTML content as a string
  *

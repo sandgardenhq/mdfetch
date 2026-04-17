@@ -36,6 +36,7 @@
 
 import { fetchHTML } from './fetcher.js';
 import { makeReadable, makeImgPathsAbsolute, makeLinksAbsolute } from './readable.js';
+import { extractLinks, formatAsFootnotes } from './links.js';
 import type { ReaderOptions, ConversionResult } from './types.js';
 import TurndownService from 'turndown';
 import { gfm } from 'turndown-plugin-gfm';
@@ -147,12 +148,24 @@ export async function readURL(
 
     const markdown = turndownService.turndown(article.content);
 
+    // When allLinks is set, extract links from the full pre-Readability HTML
+    // (so nav/footer/sidebar anchors are preserved) and append as footnotes.
+    // Appended to markdown ONLY — readableHTML and plainText stay untouched.
+    let finalMarkdown = markdown;
+    if (options?.allLinks) {
+      const links = extractLinks(htmlWithAbsoluteLinks);
+      const footnotes = formatAsFootnotes(links);
+      if (footnotes) {
+        finalMarkdown = `${markdown}\n\n---\n\n${footnotes}`;
+      }
+    }
+
     return {
       url,
       title: article.title,
       readableHTML: article.content,
       plainText: article.textContent,
-      markdown,
+      markdown: finalMarkdown,
       excerpt: article.excerpt,
       byline: article.byline,
       siteName: article.siteName,

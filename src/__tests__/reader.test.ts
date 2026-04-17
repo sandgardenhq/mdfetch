@@ -480,6 +480,107 @@ describe('reader', () => {
     });
   });
 
+  describe('readURL — allLinks (happy path)', () => {
+    it('appends footnotes to markdown when allLinks is true', async () => {
+      const html = `<html><head><title>T</title></head><body>
+        <nav><a href="https://nav.test/home">Home</a></nav>
+        <article><h1>T</h1>
+          <p>Body with <a href="https://inline.test/ref">inline ref</a>.</p>
+        </article>
+        <footer><a href="https://foot.test/about">About</a></footer>
+      </body></html>`;
+
+      const { fetchHTML } = await import('../fetcher');
+      vi.mocked(fetchHTML).mockResolvedValue(html);
+
+      const { makeReadable, makeImgPathsAbsolute, makeLinksAbsolute } = await import('../readable');
+      // makeLinksAbsolute returns the full original HTML (with nav/footer) — this is what
+      // extractLinks should run against, NOT the Readability-trimmed article content.
+      vi.mocked(makeImgPathsAbsolute).mockReturnValue(html);
+      vi.mocked(makeLinksAbsolute).mockReturnValue(html);
+      // Readability trims to just the article body, losing nav/footer links:
+      vi.mocked(makeReadable).mockReturnValue({
+        title: 'T',
+        content: '<h1>T</h1><p>Body with <a href="https://inline.test/ref">inline ref</a>.</p>',
+        textContent: 'T Body with inline ref.',
+        length: 22,
+        excerpt: '',
+        byline: '',
+        dir: '',
+        siteName: '',
+        lang: '',
+        publishedTime: ''
+      });
+
+      const result = await readURL('https://example.com', { allLinks: true });
+
+      // All three URLs from nav/body/footer present — proves extractLinks ran on the
+      // full pre-Readability HTML, not just the trimmed article content:
+      expect(result.markdown).toContain('https://nav.test/home');
+      expect(result.markdown).toContain('https://inline.test/ref');
+      expect(result.markdown).toContain('https://foot.test/about');
+      // Footnote definitions using [^N]: format:
+      expect(result.markdown).toMatch(/\[\^1\]: \[.+?\]\(https:\/\/(nav|inline|foot)\.test\/[^)]+\)/);
+      // Separator between article body and footnotes is exactly \n\n---\n\n:
+      expect(result.markdown).toMatch(/\n\n---\n\n\[\^1\]:/);
+    });
+
+    it('does not append footnotes when allLinks is false/unset', async () => {
+      const html = `<html><body><article><p>Content with <a href="https://x.test/y">link</a></p></article></body></html>`;
+
+      const { fetchHTML } = await import('../fetcher');
+      vi.mocked(fetchHTML).mockResolvedValue(html);
+
+      const { makeReadable, makeImgPathsAbsolute, makeLinksAbsolute } = await import('../readable');
+      vi.mocked(makeImgPathsAbsolute).mockReturnValue(html);
+      vi.mocked(makeLinksAbsolute).mockReturnValue(html);
+      vi.mocked(makeReadable).mockReturnValue({
+        title: 'Test',
+        content: '<p>Content with <a href="https://x.test/y">link</a></p>',
+        textContent: 'Content with link',
+        length: 17,
+        excerpt: '',
+        byline: '',
+        dir: '',
+        siteName: '',
+        lang: '',
+        publishedTime: ''
+      });
+
+      const result = await readURL('https://example.com');
+
+      expect(result.markdown).not.toMatch(/\[\^\d+\]:/);
+    });
+
+    it('leaves readableHTML and plainText untouched when allLinks is true', async () => {
+      const html = `<html><body><article><p>Content with <a href="https://x.test/y">link</a></p></article></body></html>`;
+
+      const { fetchHTML } = await import('../fetcher');
+      vi.mocked(fetchHTML).mockResolvedValue(html);
+
+      const { makeReadable, makeImgPathsAbsolute, makeLinksAbsolute } = await import('../readable');
+      vi.mocked(makeImgPathsAbsolute).mockReturnValue(html);
+      vi.mocked(makeLinksAbsolute).mockReturnValue(html);
+      vi.mocked(makeReadable).mockReturnValue({
+        title: 'Test',
+        content: '<p>Content with <a href="https://x.test/y">link</a></p>',
+        textContent: 'Content with link',
+        length: 17,
+        excerpt: '',
+        byline: '',
+        dir: '',
+        siteName: '',
+        lang: '',
+        publishedTime: ''
+      });
+
+      const result = await readURL('https://example.com', { allLinks: true });
+
+      expect(result.readableHTML).not.toContain('[^1]:');
+      expect(result.plainText).not.toContain('[^1]:');
+    });
+  });
+
   describe('ReaderError', () => {
     it('should create error with message and original error', () => {
       const originalError = new Error('Original error');

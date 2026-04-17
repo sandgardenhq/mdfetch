@@ -132,11 +132,27 @@
   - All tests passing, build successful, no linter errors
   - Followed TDD: RED-GREEN-REFACTOR cycle for all new tests
 
+## Feature: --always-readable and --all-links (Plan Task 6) - COMPLETE
+- Started: 2026-04-17
+- Tests: 126 passing, 0 failing (added 3 new allLinks happy-path tests)
+- Coverage: Statements: 94.02%, Branches: 91.57%, Functions: 95.23%, Lines: 94.4%
+- Build: ✅ Successful
+- Linting: ✅ Clean (tsc --noEmit clean)
+- Completed: 2026-04-17
+- Notes:
+  - Strict TDD: RED verified (expected '# T...' to contain 'https://nav.test/home' fails), GREEN after wiring.
+  - Threaded `allLinks` through `readURL`: when set, `extractLinks` runs on `htmlWithAbsoluteLinks`
+    (post-absolutization, pre-Readability) so nav/footer/sidebar anchors survive.
+  - Footnotes appended to `markdown` ONLY — `readableHTML` and `plainText` untouched.
+  - Separator is exactly `\n\n---\n\n` between article body and `[^1]:` block.
+  - Empty-footnotes guard: when `extractLinks` returns `[]`, `formatAsFootnotes` returns `''`, skip append.
+  - Task 7 (Readability-failure path) intentionally NOT implemented in this commit.
+
 ## Current Status
 - ✅ Project structure ready
 - ✅ All dependencies optimized (using linkedom instead of jsdom)
 - ✅ Test infrastructure configured
 - ✅ TypeScript configured with strict settings
 - ✅ All coverage thresholds met (90%+)
-- ✅ 95 tests passing across all modules
+- ✅ 126 tests passing across all modules
 - ✅ Build and linting clean

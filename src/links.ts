@@ -53,8 +53,12 @@ function escapeBrackets(text: string): string {
   return text.replace(/\[/g, '\\[').replace(/\]/g, '\\]');
 }
 
+function formatURL(url: string): string {
+  return /[()]/.test(url) ? `<${url}>` : url;
+}
+
 export function formatAsFootnotes(links: Link[]): string {
   return links
-    .map((l, i) => `[^${i + 1}]: [${escapeBrackets(l.text)}](${l.url})`)
+    .map((l, i) => `[^${i + 1}]: [${escapeBrackets(l.text)}](${formatURL(l.url)})`)
     .join('\n');
 }

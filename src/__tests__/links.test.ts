@@ -114,6 +114,16 @@ describe('formatAsFootnotes', () => {
     expect(formatAsFootnotes([{ url: 'https://a.test/', text: 'foo [bar] baz' }]))
       .toBe('[^1]: [foo \\[bar\\] baz](https://a.test/)');
   });
+
+  it('wraps URLs containing parentheses in angle brackets', () => {
+    expect(formatAsFootnotes([{ url: 'https://en.wikipedia.org/wiki/Foo_(bar)', text: 'Foo' }]))
+      .toBe('[^1]: [Foo](<https://en.wikipedia.org/wiki/Foo_(bar)>)');
+  });
+
+  it('wraps URLs containing only an opening paren in angle brackets', () => {
+    expect(formatAsFootnotes([{ url: 'https://a.test/path(x', text: 'A' }]))
+      .toBe('[^1]: [A](<https://a.test/path(x>)');
+  });
 });
 
 describe('extractTitle', () => {

@@ -29,6 +29,8 @@ export interface FetchOptions {
   retries?: number;
   /** Delay between retries in milliseconds (default: 1000) */
   retryDelay?: number;
+  /** User-Agent header sent with the request (default: mdfetch identifier) */
+  userAgent?: string;
 }
 
 /**

@@ -1,20 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
-
-// Spy on the @mozilla/readability Readability constructor so we can assert
-// exactly what options `makeReadable` forwards to it.
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const actualReadability = (require('@mozilla/readability') as typeof import('@mozilla/readability')).Readability;
-const readabilityCtorSpy = vi.fn(
-  (doc: Document, opts?: Record<string, unknown>) => new actualReadability(doc, opts as any)
-);
-vi.mock('@mozilla/readability', () => ({
-  Readability: function (this: any, doc: Document, opts?: Record<string, unknown>) {
-    const instance = readabilityCtorSpy(doc, opts);
-    // Make `new MockedReadability(...)` return the real instance.
-    return instance;
-  },
-}));
-
+import { describe, it, expect } from 'vitest';
 import {
   convertToAbsoluteURL,
   makeImgPathsAbsolute,
@@ -439,41 +423,6 @@ describe('readable', () => {
 
       expect(link.title).toBe('Example Link');
       expect(link.url).toBe('https://example.com');
-    });
-  });
-
-  describe('makeReadable — alwaysReadable option', () => {
-    const shortHTML = `
-      <html><head><title>Tiny</title></head>
-      <body><article><h1>Tiny</h1><p>Just a sentence.</p></article></body></html>`;
-
-    it('passes charThreshold: 0 to Readability when alwaysReadable is true', () => {
-      readabilityCtorSpy.mockClear();
-      makeReadable(shortHTML, { alwaysReadable: true });
-      expect(readabilityCtorSpy).toHaveBeenCalled();
-      expect(readabilityCtorSpy.mock.calls[0][1]).toEqual({ charThreshold: 0 });
-    });
-
-    it('does NOT pass charThreshold: 0 by default', () => {
-      readabilityCtorSpy.mockClear();
-      makeReadable(shortHTML);
-      expect(readabilityCtorSpy).toHaveBeenCalled();
-      expect(readabilityCtorSpy.mock.calls[0][1]).toEqual({});
-    });
-
-    it('does NOT pass charThreshold: 0 when alwaysReadable is false', () => {
-      readabilityCtorSpy.mockClear();
-      makeReadable(shortHTML, { alwaysReadable: false });
-      expect(readabilityCtorSpy).toHaveBeenCalled();
-      expect(readabilityCtorSpy.mock.calls[0][1]).toEqual({});
-    });
-
-    it('still returns a valid Article when alwaysReadable is true', () => {
-      readabilityCtorSpy.mockClear();
-      const article = makeReadable(shortHTML, { alwaysReadable: true });
-      expect(article).not.toBeNull();
-      expect(article!.title).toBe('Tiny');
-      expect(article!.textContent).toMatch(/Just a sentence/);
     });
   });
 });

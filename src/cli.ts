@@ -23,13 +23,17 @@ program
   .option('--timeout <ms>', 'Request timeout in milliseconds', '30000')
   .option('--retries <count>', 'Number of retry attempts', '3')
   .option('--retry-delay <ms>', 'Delay between retries in milliseconds', '1000')
+  .option('--always-readable', 'Relax Readability thresholds so short/borderline pages still parse')
+  .option('--all-links', 'Extract every qualifying link from the raw page and append as markdown footnotes')
   .action(async (url: string, options: any) => {
     try {
       // Parse options
       const readerOptions = {
         timeout: parseInt(options.timeout),
         retries: parseInt(options.retries),
-        retryDelay: parseInt(options.retryDelay)
+        retryDelay: parseInt(options.retryDelay),
+        alwaysReadable: !!options.alwaysReadable,
+        allLinks: !!options.allLinks
       };
 
       // Check for conflicting flags

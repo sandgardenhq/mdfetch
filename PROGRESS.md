@@ -185,6 +185,47 @@
   - Readability mock extended with a per-call behavior queue (`throwCtor`,
     `nullParse`, `real`) so tests can drive specific constructor/parse paths.
 
+## Feature: --always-readable and --all-links - COMPLETE
+- Started: 2026-04-17
+- Tests: 143 passing, 0 failing
+- Coverage: Statements: 99.31%, Branches: 93.2%, Functions: 95.45%, Lines: 100%
+- Build: ✅ Successful (`npm run build` clean)
+- Linting: ✅ Clean (`npx tsc --noEmit` clean)
+- Completed: 2026-04-17
+- Shipped:
+  - `--always-readable` CLI flag and `alwaysReadable` API option. Runs Readability
+    with `charThreshold: 1` (not 0 — Readability's `options.charThreshold || DEFAULT`
+    coerces 0 back to the default), and adds a raw-body fallback that synthesizes an
+    `Article` from `<title>` + `document.body` when `parse()` returns `null`.
+  - `--all-links` CLI flag and `allLinks` API option. Extracts every qualifying
+    `<a href>` from the raw HTML after URL-absolutization and before Readability,
+    so nav/footer/sidebar anchors survive. Filters: `http(s)` only; skips
+    `mailto:`, `javascript:`, `tel:`, `data:`, `ftp:`, anchor-only (`#...`),
+    empty `href`, and image extensions (.jpg/.jpeg/.png/.gif/.webp/.svg/.ico/
+    .avif/.bmp, case-insensitive, pathname-only). Dedupes by URL, keeps first-
+    occurrence text.
+  - Footnotes are formatted as `[^N]: [text](url)` (brackets in link text
+    escaped), joined with newlines, and appended to `result.markdown` ONLY
+    (never `readableHTML` or `plainText`) with a `\n\n---\n\n` divider.
+  - When Readability fails AND `--all-links` has produced at least one link,
+    `readURL` returns a minimal `ConversionResult` with title-derived heading
+    and the footnote block, rather than throwing. Without extractable links it
+    still throws (nothing useful to return).
+  - Both flags are independent and composable.
+- Caveats / notable:
+  - The linkedom `<textarea>.value` entity-decode retry (readable.ts) was also
+    fixed this feature: the retry now reassigns `document` to the cleaned DOM
+    before running Readability, so the `alwaysReadable` raw-body fallback sees
+    the cleaned body rather than the stale original. linkedom's textarea
+    doesn't actually decode HTML entities, so the behavioral delta is not
+    observable in the test environment — there is a test that exercises the
+    code path and asserts it doesn't throw, with a comment documenting the
+    observability gap.
+  - `--always-readable` on its own (without `--all-links`) is still best-effort:
+    a page with no `<body>` content and no links will still throw.
+  - No inline reference rewriting — footnotes are a pure append; the article
+    body's existing markdown links are left intact.
+
 ## Current Status
 - ✅ Project structure ready
 - ✅ All dependencies optimized (using linkedom instead of jsdom)
@@ -193,3 +234,4 @@
 - ✅ All coverage thresholds met (90%+)
 - ✅ 143 tests passing across all modules
 - ✅ Build and linting clean
+- ✅ `--always-readable` and `--all-links` feature shipped and documented

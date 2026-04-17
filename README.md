@@ -64,6 +64,15 @@ mdfetch https://example.com/article --retries 5 --retry-delay 2000
 
 # Combine options
 mdfetch https://example.com/article -o article.md --timeout 45000
+
+# Force Readability to parse short or borderline pages that would normally be rejected
+mdfetch https://example.com/short-note --always-readable
+
+# Append every qualifying link from the raw page as markdown footnotes
+mdfetch https://example.com/link-heavy-page --all-links
+
+# Compose both flags: loosen Readability AND include a full link archive
+mdfetch https://example.com/tricky-page --always-readable --all-links
 ```
 
 ### All Options
@@ -81,11 +90,50 @@ Options:
   -o, --output <file>  Output file path (defaults to stdout)
   --html               Output readable HTML instead of markdown
   --text               Output plain text instead of markdown
-  --timeout <ms>       Request timeout in milliseconds (default: 30000)
-  --retries <count>    Number of retry attempts (default: 3)
-  --retry-delay <ms>   Delay between retries in milliseconds (default: 1000)
+  --timeout <ms>       Request timeout in milliseconds (default: "30000")
+  --retries <count>    Number of retry attempts (default: "3")
+  --retry-delay <ms>   Delay between retries in milliseconds (default: "1000")
+  --always-readable    Relax Readability thresholds so short/borderline pages
+                       still parse
+  --all-links          Extract every qualifying link from the raw page and
+                       append as markdown footnotes
   -h, --help           display help for command
 ```
+
+### `--always-readable` and `--all-links`
+
+These two flags are independent and can be combined.
+
+- **`--always-readable`** — Use this when a page is too short or too lightly
+  structured for Mozilla Readability to accept by default (for example, a brief
+  note, a changelog entry, or a landing page). With the flag set, Readability
+  runs with a relaxed character threshold, and if it still cannot extract an
+  article, mdfetch falls back to the raw `<body>` HTML with the `<title>` as
+  the heading. This is best-effort: truly empty pages will still error.
+
+- **`--all-links`** — Use this when you want a full archive of every outbound
+  link on a page, regardless of whether Readability could extract the article.
+  Links are collected from the raw HTML (including `<nav>`, `<footer>`, and
+  sidebars, which Readability normally discards), filtered to `http(s)` only,
+  deduplicated by URL, and appended to the markdown output as numbered
+  footnotes:
+
+  ```markdown
+  Article body...
+
+  ---
+
+  [^1]: [Link text](https://example.com/one)
+  [^2]: [Another link](https://example.com/two)
+  ```
+
+  If Readability fails but there are extractable links, mdfetch still returns
+  a minimal document containing the page title and the footnote block rather
+  than erroring out.
+
+- **Composing them** — `--always-readable --all-links` gives you the best-effort
+  article extraction plus the full link archive. Useful for index/hub pages
+  that are mostly links with a small amount of introductory text.
 
 ## Examples
 

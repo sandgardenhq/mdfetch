@@ -62,9 +62,16 @@ mdfetch https://example.com/article --timeout 60000
 # Custom retry settings
 mdfetch https://example.com/article --retries 5 --retry-delay 2000
 
+# Custom User-Agent header
+mdfetch https://example.com/article --user-agent "my-bot/1.0"
+
 # Combine options
 mdfetch https://example.com/article -o article.md --timeout 45000
 ```
+
+By default, mdfetch identifies itself with the User-Agent
+`mdfetch/<version> (+https://github.com/sandgardenhq/mdfetch)`. Use
+`--user-agent` to override it when a site requires a specific string.
 
 ### All Options
 
@@ -84,6 +91,7 @@ Options:
   --timeout <ms>       Request timeout in milliseconds (default: 30000)
   --retries <count>    Number of retry attempts (default: 3)
   --retry-delay <ms>   Delay between retries in milliseconds (default: 1000)
+  --user-agent <string>  Custom User-Agent header (defaults to mdfetch identifier)
   -h, --help           display help for command
 ```
 

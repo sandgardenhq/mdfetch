@@ -23,13 +23,15 @@ program
   .option('--timeout <ms>', 'Request timeout in milliseconds', '30000')
   .option('--retries <count>', 'Number of retry attempts', '3')
   .option('--retry-delay <ms>', 'Delay between retries in milliseconds', '1000')
+  .option('--user-agent <string>', 'Custom User-Agent header (defaults to mdfetch identifier)')
   .action(async (url: string, options: any) => {
     try {
       // Parse options
       const readerOptions = {
         timeout: parseInt(options.timeout),
         retries: parseInt(options.retries),
-        retryDelay: parseInt(options.retryDelay)
+        retryDelay: parseInt(options.retryDelay),
+        ...(options.userAgent ? { userAgent: options.userAgent } : {})
       };
 
       // Check for conflicting flags

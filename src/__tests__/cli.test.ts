@@ -1,7 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { promises as fs } from 'fs';
-import { execSync } from 'child_process';
+import { execSync, spawn } from 'child_process';
+import http from 'http';
+import { AddressInfo } from 'net';
 import path from 'path';
+import { DEFAULT_USER_AGENT } from '../fetcher';
 
 // We'll test the CLI by actually running it as a subprocess
 // This is an integration test that verifies the entire pipeline
@@ -101,4 +104,58 @@ describe('CLI Output', () => {
     // Test error handling
     expect(true).toBe(true); // Placeholder
   });
+});
+
+describe('--user-agent flag', () => {
+  // Run the CLI against a local HTTP server that captures the incoming
+  // User-Agent header. This mirrors the existing subprocess-based style
+  // in this file and lets us verify the CLI's pass-through behavior
+  // end-to-end without mocking.
+  async function runCliAgainstLocalServer(
+    cliArgs: string[]
+  ): Promise<{ userAgent: string | undefined }> {
+    return new Promise((resolve, reject) => {
+      let capturedUA: string | undefined;
+      const server = http.createServer((req, res) => {
+        capturedUA = req.headers['user-agent'];
+        res.writeHead(200, { 'content-type': 'text/html' });
+        res.end(
+          '<html><head><title>T</title></head><body><article><p>hello world from local test server with enough content to keep readability happy enough to succeed on this small synthetic page</p></article></body></html>'
+        );
+      });
+
+      server.on('error', reject);
+      server.listen(0, '127.0.0.1', () => {
+        const port = (server.address() as AddressInfo).port;
+        const url = `http://127.0.0.1:${port}/`;
+        // Use spawn (async) — execSync blocks the event loop, which would
+        // starve the in-process HTTP server so it could never accept the
+        // CLI's incoming request.
+        const child = spawn('tsx', ['src/cli.ts', ...cliArgs, url], {
+          stdio: 'pipe'
+        });
+        child.on('close', () => {
+          server.close(() => resolve({ userAgent: capturedUA }));
+        });
+        child.on('error', () => {
+          server.close(() => resolve({ userAgent: capturedUA }));
+        });
+      });
+    });
+  }
+
+  it('sends DEFAULT_USER_AGENT when --user-agent flag is absent', async () => {
+    const { userAgent } = await runCliAgainstLocalServer([]);
+
+    expect(userAgent).toBe(DEFAULT_USER_AGENT);
+  }, 30000);
+
+  it('forwards --user-agent value to the outgoing request', async () => {
+    const { userAgent } = await runCliAgainstLocalServer([
+      '--user-agent',
+      'custom-bot/1.0'
+    ]);
+
+    expect(userAgent).toBe('custom-bot/1.0');
+  }, 30000);
 });

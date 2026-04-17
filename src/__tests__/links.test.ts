@@ -70,6 +70,21 @@ describe('extractLinks', () => {
       { url: 'https://a.test/', text: 'Hello world' }
     ]);
   });
+
+  // Covers links.ts the `new URL()` catch branch — `new URL('/relative')` throws
+  // without a base. extractLinks runs after makeLinksAbsolute in readURL so these
+  // are rare in practice, but the filter must still reject them if they slip through.
+  it('skips relative paths that fail to parse as absolute URLs', () => {
+    expect(extractLinks('<a href="/relative">rel</a>')).toEqual([]);
+  });
+
+  it('skips protocol-relative paths that fail to parse as absolute URLs', () => {
+    expect(extractLinks('<a href="//protocol-relative/foo">rel</a>')).toEqual([]);
+  });
+
+  it('skips arbitrary malformed hrefs', () => {
+    expect(extractLinks('<a href="http://[not a url">bad</a>')).toEqual([]);
+  });
 });
 
 describe('formatAsFootnotes', () => {

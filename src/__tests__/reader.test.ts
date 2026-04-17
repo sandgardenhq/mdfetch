@@ -552,6 +552,37 @@ describe('reader', () => {
       expect(result.markdown).not.toMatch(/\[\^\d+\]:/);
     });
 
+    // Covers reader.ts:187 (`if (footnotes)` falsy branch): allLinks:true on
+    // a page with zero extractable links — makeReadable still succeeds and the
+    // final markdown has NO `\n\n---\n\n` divider appended.
+    it('does not append footnote divider when allLinks is true but no links are extractable', async () => {
+      const html = `<html><body><article><p>${'content '.repeat(100)}</p></article></body></html>`;
+
+      const { fetchHTML } = await import('../fetcher');
+      vi.mocked(fetchHTML).mockResolvedValue(html);
+
+      const { makeReadable, makeImgPathsAbsolute, makeLinksAbsolute } = await import('../readable');
+      vi.mocked(makeImgPathsAbsolute).mockReturnValue(html);
+      vi.mocked(makeLinksAbsolute).mockReturnValue(html);
+      vi.mocked(makeReadable).mockReturnValue({
+        title: 'Test',
+        content: '<p>content</p>',
+        textContent: 'content',
+        length: 7,
+        excerpt: '',
+        byline: '',
+        dir: '',
+        siteName: '',
+        lang: '',
+        publishedTime: ''
+      });
+
+      const result = await readURL('https://example.com', { allLinks: true });
+
+      expect(result.markdown).not.toContain('\n\n---\n\n');
+      expect(result.markdown).not.toMatch(/\[\^\d+\]:/);
+    });
+
     it('leaves readableHTML and plainText untouched when allLinks is true', async () => {
       const html = `<html><body><article><p>Content with <a href="https://x.test/y">link</a></p></article></body></html>`;
 
@@ -601,7 +632,17 @@ describe('reader', () => {
         throw new Error('Failed to make article readable');
       });
 
-      await expect(readURL('https://example.com')).rejects.toThrow(/Failed to extract readable content/);
+      // Assert the ReaderError was produced via the Task-7 inner-catch rethrow
+      // path (not a pre-Task-7 short-circuit). `originalError` must be the exact
+      // "Failed to make article readable" error we mocked — if some earlier
+      // handler swallowed/wrapped it, this assertion catches that regression.
+      await expect(readURL('https://example.com')).rejects.toMatchObject({
+        name: 'ReaderError',
+        message: expect.stringMatching(/Failed to extract readable content/),
+        originalError: expect.objectContaining({
+          message: 'Failed to make article readable'
+        })
+      });
     });
 
     it('returns a title + footnotes-only result when allLinks is true and Readability fails', async () => {
@@ -668,6 +709,57 @@ describe('reader', () => {
 
       await expect(readURL('https://example.com', { allLinks: true }))
         .rejects.toThrow(/Failed to extract readable content/);
+    });
+  });
+
+  describe('readURL — combined alwaysReadable + allLinks', () => {
+    it('forwards alwaysReadable:true to makeReadable AND appends footnotes to markdown', async () => {
+      const html = `<html><head><title>Combined</title></head><body>
+        <nav><a href="https://nav.test/home">Home</a></nav>
+        <article><p>Short body.</p></article>
+        <footer><a href="https://foot.test/about">About</a></footer>
+      </body></html>`;
+
+      const { fetchHTML } = await import('../fetcher');
+      vi.mocked(fetchHTML).mockResolvedValue(html);
+
+      const { makeReadable, makeImgPathsAbsolute, makeLinksAbsolute } = await import('../readable');
+      vi.mocked(makeImgPathsAbsolute).mockReturnValue(html);
+      vi.mocked(makeLinksAbsolute).mockReturnValue(html);
+      // Simulate makeReadable succeeding via its alwaysReadable fallback path.
+      vi.mocked(makeReadable).mockReturnValue({
+        title: 'Combined',
+        content: '<p>Short body.</p>',
+        textContent: 'Short body.',
+        length: 11,
+        excerpt: '',
+        byline: '',
+        dir: '',
+        siteName: '',
+        lang: '',
+        publishedTime: ''
+      });
+
+      const result = await readURL('https://example.com', {
+        alwaysReadable: true,
+        allLinks: true
+      });
+
+      // alwaysReadable flowed through to makeReadable:
+      expect(makeReadable).toHaveBeenCalledWith(
+        html,
+        expect.objectContaining({ alwaysReadable: true })
+      );
+      // Readability produced the body (Turndown renders <p>Short body.</p> → "Short body.")
+      // and allLinks appended footnote DEFINITIONS to the end of markdown.
+      expect(result.markdown).toContain('Short body.');
+      expect(result.markdown).toMatch(/\n\n---\n\n\[\^1\]: /);
+      // Ends with footnote definition block (last non-empty line is a footnote def):
+      expect(result.markdown.trimEnd()).toMatch(/\[\^\d+\]: \[[^\]]*\]\(https:\/\/[^)]+\)$/);
+      // Both nav and footer links are in the footnotes (proves we ran extractLinks
+      // against the FULL pre-Readability HTML, not just the trimmed article content):
+      expect(result.markdown).toContain('https://nav.test/home');
+      expect(result.markdown).toContain('https://foot.test/about');
     });
   });
 

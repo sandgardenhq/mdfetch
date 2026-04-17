@@ -148,11 +148,48 @@
   - Empty-footnotes guard: when `extractLinks` returns `[]`, `formatAsFootnotes` returns `''`, skip append.
   - Task 7 (Readability-failure path) intentionally NOT implemented in this commit.
 
+## Task 9: Coverage & Edge Cases (Plan Task 9) - COMPLETE
+- Started: 2026-04-17
+- Tests: 143 passing, 0 failing (added 8 new tests)
+- Coverage: Statements: 99.31%, Branches: 93.2%, Functions: 95.45%, Lines: 100%
+  - fetcher.ts:  100% lines
+  - links.ts:    100% lines (was 96.42%)
+  - readable.ts: 100% lines (was 83.33%; catch block 265-271 now exercised)
+  - reader.ts:   100% lines / 100% branches (was 94.44% branches; line 187 covered)
+- Build: ✅ Successful
+- Linting: ✅ Clean (tsc --noEmit clean)
+- Completed: 2026-04-17
+- Notes:
+  - **Bug fix (readable.ts):** in the entity-decode retry catch block, reassigned
+    the outer `document` to the cleaned retry DOM before constructing Readability.
+    Previously, if the retry returned null and `alwaysReadable` was true, the
+    fallback ran against the STALE original DOM. Fix is clearly correct; linkedom's
+    textarea doesn't decode entities so the behavioral delta isn't observable in
+    this test environment — added a test that exercises the code path and asserts
+    it succeeds without throwing (comment in test explains the observability gap).
+  - **Tightened M1:** `alwaysReadable does not kick in when Readability already
+    returns an article` now asserts on `readability-page-1` (Readability's wrapper
+    marker) instead of the ambiguous `<p`, which appeared in both branches.
+  - **Strengthened Task-7 failure-path:** the "still throws without allLinks" test
+    now asserts the thrown `ReaderError` has `originalError.message === 'Failed to
+    make article readable'`, proving the error flowed through the inner-catch
+    rethrow path (not a pre-Task-7 short-circuit).
+  - **Added branch-coverage tests:**
+    - links.ts: `new URL('/relative')` / `'//protocol-relative/'` / `'http://[bad'`
+      all hit the try/catch-false branch.
+    - reader.ts:187: `allLinks:true` + zero extractable links + successful
+      makeReadable hits the `if (footnotes)` false branch (no divider appended).
+  - **Combined-flags test:** asserts `alwaysReadable:true` AND `allLinks:true`
+    compose — `makeReadable` receives the flag and final markdown ends with a
+    footnote definition block.
+  - Readability mock extended with a per-call behavior queue (`throwCtor`,
+    `nullParse`, `real`) so tests can drive specific constructor/parse paths.
+
 ## Current Status
 - ✅ Project structure ready
 - ✅ All dependencies optimized (using linkedom instead of jsdom)
 - ✅ Test infrastructure configured
 - ✅ TypeScript configured with strict settings
 - ✅ All coverage thresholds met (90%+)
-- ✅ 126 tests passing across all modules
+- ✅ 143 tests passing across all modules
 - ✅ Build and linting clean

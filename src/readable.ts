@@ -266,8 +266,14 @@ export function makeReadable(html: string, options: MakeReadableOptions = {}): A
         textarea.innerHTML = html
         const cleanHTML = textarea.value
 
-        const r: any = parseHTML(cleanHTML)
-        const reader = new Readability(r.document, readabilityOptions)
+        const r2: any = parseHTML(cleanHTML)
+        // Overwrite the outer `document` binding so that, if Readability's retry
+        // also returns null and the alwaysReadable fallback kicks in below, the
+        // fallback sees the CLEANED (entity-decoded) DOM rather than the stale
+        // original one. Without this reassignment the fallback would emit the
+        // un-decoded body text.
+        document = r2.document
+        const reader = new Readability(document, readabilityOptions)
         article = reader.parse()
     }
     // catchall -- if we can't parse the article, either fall back or throw

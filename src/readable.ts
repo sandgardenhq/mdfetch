@@ -177,6 +177,19 @@ export function makeURLAbsolute(tag: string, attr: string, hostname: string, htm
 
 
 /**
+ * Options for {@link makeReadable}.
+ */
+export interface MakeReadableOptions {
+    /**
+     * When true, relax Mozilla Readability's thresholds by passing
+     * `charThreshold: 0` to the Readability constructor. This lets
+     * short or borderline pages still produce an article instead of
+     * being silently rejected by the default 500-char minimum.
+     */
+    alwaysReadable?: boolean;
+}
+
+/**
  * Extracts readable article content from HTML using Mozilla Readability.
  *
  * This function uses the Readability algorithm to extract the main article
@@ -189,6 +202,7 @@ export function makeURLAbsolute(tag: string, attr: string, hostname: string, htm
  * - Fallback handling for malformed HTML entities
  *
  * @param html - The raw HTML content to process
+ * @param options - Optional behavior flags; see {@link MakeReadableOptions}
  * @returns Article object with extracted content and metadata
  *
  * @throws {Error} When the article cannot be parsed or lacks sufficient content
@@ -204,7 +218,8 @@ export function makeURLAbsolute(tag: string, attr: string, hostname: string, htm
  * console.log(article.byline);       // Author information
  * ```
  */
-export function makeReadable(html: string): Article | null {
+export function makeReadable(html: string, options: MakeReadableOptions = {}): Article | null {
+    const readabilityOptions = options.alwaysReadable ? { charThreshold: 0 } : {}
     let document: Document
     const r: any = parseHTML(html)
     document = r.document
@@ -212,7 +227,7 @@ export function makeReadable(html: string): Article | null {
     let article: null | any = null
     try {
         // extract article using Readability
-        const reader = new Readability(document)
+        const reader = new Readability(document, readabilityOptions)
         article = reader.parse()
     } catch (e) {
         const textarea = document.createElement('textarea')
@@ -220,7 +235,7 @@ export function makeReadable(html: string): Article | null {
         const cleanHTML = textarea.value
 
         const r: any = parseHTML(cleanHTML)
-        const reader = new Readability(r.document)
+        const reader = new Readability(r.document, readabilityOptions)
         article = reader.parse()
     }
     // catchall -- if we can't parse the article, skip it

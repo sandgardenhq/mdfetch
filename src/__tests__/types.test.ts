@@ -198,4 +198,34 @@ describe('Type Definitions', () => {
       expect(result.metadata.extractedAt).toBeDefined();
     });
   });
+
+  describe('ReaderOptions — new flags', () => {
+    it('accepts alwaysReadable boolean', () => {
+      const opts: ReaderOptions = { alwaysReadable: true };
+      expect(opts.alwaysReadable).toBe(true);
+    });
+
+    it('accepts allLinks boolean', () => {
+      const opts: ReaderOptions = { allLinks: true };
+      expect(opts.allLinks).toBe(true);
+    });
+
+    it('allows both flags to be omitted', () => {
+      const opts: ReaderOptions = {};
+      expect(opts.alwaysReadable).toBeUndefined();
+      expect(opts.allLinks).toBeUndefined();
+    });
+  });
+
+  describe('CliOptions — new flags', () => {
+    it('accepts alwaysReadable boolean', () => {
+      const opts: CliOptions = { alwaysReadable: true };
+      expect(opts.alwaysReadable).toBe(true);
+    });
+
+    it('accepts allLinks boolean', () => {
+      const opts: CliOptions = { allLinks: true };
+      expect(opts.allLinks).toBe(true);
+    });
+  });
 });

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { fetchHTML, FetchError } from '../fetcher';
+import { fetchHTML, FetchError, DEFAULT_USER_AGENT } from '../fetcher';
 
 // Mock global fetch
 global.fetch = vi.fn();
@@ -32,7 +32,7 @@ describe('fetchHTML', () => {
         'https://example.com',
         expect.objectContaining({
           headers: expect.objectContaining({
-            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:123.0) Gecko/20100101 Firefox/123.0'
+            'User-Agent': DEFAULT_USER_AGENT
           })
         })
       );
@@ -353,6 +353,48 @@ describe('fetchHTML', () => {
       );
 
       consoleSpy.mockRestore();
+    });
+  });
+
+  describe('user agent', () => {
+    it('DEFAULT_USER_AGENT identifies as mdfetch', () => {
+      expect(DEFAULT_USER_AGENT).toMatch(/^mdfetch\//);
+    });
+
+    it('uses DEFAULT_USER_AGENT when no option is passed', async () => {
+      const mockResponse = {
+        ok: true,
+        headers: new Headers({ 'content-type': 'text/html' }),
+        text: vi.fn().mockResolvedValue('<html></html>')
+      };
+      (global.fetch as any).mockResolvedValue(mockResponse);
+
+      await fetchHTML('https://example.com');
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        'https://example.com',
+        expect.objectContaining({
+          headers: expect.objectContaining({ 'User-Agent': DEFAULT_USER_AGENT })
+        })
+      );
+    });
+
+    it('uses a caller-supplied userAgent when provided', async () => {
+      const mockResponse = {
+        ok: true,
+        headers: new Headers({ 'content-type': 'text/html' }),
+        text: vi.fn().mockResolvedValue('<html></html>')
+      };
+      (global.fetch as any).mockResolvedValue(mockResponse);
+
+      await fetchHTML('https://example.com', { userAgent: 'custom-bot/2.0' });
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        'https://example.com',
+        expect.objectContaining({
+          headers: expect.objectContaining({ 'User-Agent': 'custom-bot/2.0' })
+        })
+      );
     });
   });
 });

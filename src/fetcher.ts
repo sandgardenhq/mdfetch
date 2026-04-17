@@ -26,11 +26,19 @@
  * ```
  */
 
+import { readFileSync } from 'fs';
 import { FetchOptions } from './types.js';
 
 const DEFAULT_TIMEOUT = 30000; // 30 seconds
 const DEFAULT_RETRIES = 3;
 const DEFAULT_RETRY_DELAY = 1000; // 1 second
+
+const pkg = JSON.parse(
+  readFileSync(new URL('../package.json', import.meta.url), 'utf-8')
+) as { version: string };
+
+/** Default User-Agent that self-identifies as mdfetch. */
+export const DEFAULT_USER_AGENT = `mdfetch/${pkg.version} (+https://github.com/sandgardenhq/mdfetch)`;
 
 /**
  * Custom error class for fetch-related errors.
@@ -61,7 +69,8 @@ export class FetchError extends Error {
 
 async function fetchWithTimeout(
   url: string,
-  timeout: number
+  timeout: number,
+  userAgent: string
 ): Promise<Response> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeout);
@@ -70,7 +79,7 @@ async function fetchWithTimeout(
     const response = await fetch(url, {
       signal: controller.signal,
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:123.0) Gecko/20100101 Firefox/123.0',
+        'User-Agent': userAgent,
       },
     });
     clearTimeout(timeoutId);
@@ -130,13 +139,14 @@ export async function fetchHTML(
     timeout = DEFAULT_TIMEOUT,
     retries = DEFAULT_RETRIES,
     retryDelay = DEFAULT_RETRY_DELAY,
+    userAgent = DEFAULT_USER_AGENT,
   } = options;
 
   let lastError: Error | undefined;
 
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
-      const response = await fetchWithTimeout(url, timeout);
+      const response = await fetchWithTimeout(url, timeout, userAgent);
 
       if (!response.ok) {
         throw new FetchError(

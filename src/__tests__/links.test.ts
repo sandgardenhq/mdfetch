@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { extractLinks } from '../links.js';
+import { extractLinks, formatAsFootnotes } from '../links.js';
 
 describe('extractLinks', () => {
   it('returns empty array when there are no links', () => {
@@ -69,5 +69,34 @@ describe('extractLinks', () => {
     expect(extractLinks(html)).toEqual([
       { url: 'https://a.test/', text: 'Hello world' }
     ]);
+  });
+});
+
+describe('formatAsFootnotes', () => {
+  it('returns empty string for empty array', () => {
+    expect(formatAsFootnotes([])).toBe('');
+  });
+
+  it('formats a single link as footnote 1', () => {
+    expect(formatAsFootnotes([{ url: 'https://a.test/', text: 'A' }]))
+      .toBe('[^1]: [A](https://a.test/)');
+  });
+
+  it('numbers footnotes sequentially starting at 1', () => {
+    const out = formatAsFootnotes([
+      { url: 'https://a.test/', text: 'A' },
+      { url: 'https://b.test/', text: 'B' },
+      { url: 'https://c.test/', text: 'C' }
+    ]);
+    expect(out).toBe(
+      '[^1]: [A](https://a.test/)\n' +
+      '[^2]: [B](https://b.test/)\n' +
+      '[^3]: [C](https://c.test/)'
+    );
+  });
+
+  it('escapes square brackets in link text', () => {
+    expect(formatAsFootnotes([{ url: 'https://a.test/', text: 'foo [bar] baz' }]))
+      .toBe('[^1]: [foo \\[bar\\] baz](https://a.test/)');
   });
 });

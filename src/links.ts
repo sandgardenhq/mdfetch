@@ -42,3 +42,13 @@ export function extractLinks(html: string): Link[] {
   }
   return out;
 }
+
+function escapeBrackets(text: string): string {
+  return text.replace(/\[/g, '\\[').replace(/\]/g, '\\]');
+}
+
+export function formatAsFootnotes(links: Link[]): string {
+  return links
+    .map((l, i) => `[^${i + 1}]: [${escapeBrackets(l.text)}](${l.url})`)
+    .join('\n');
+}

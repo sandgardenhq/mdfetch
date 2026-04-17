@@ -126,7 +126,9 @@ export async function readURL(
     const htmlWithAbsoluteLinks = makeLinksAbsolute(url, htmlWithAbsoluteImages);
 
     // Extract readable content
-    const article = makeReadable(htmlWithAbsoluteLinks);
+    const article = makeReadable(htmlWithAbsoluteLinks, {
+      alwaysReadable: options?.alwaysReadable
+    });
 
     if (!article) {
       throw new Error('Failed to extract article');

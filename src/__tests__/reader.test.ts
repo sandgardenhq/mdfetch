@@ -372,6 +372,114 @@ describe('reader', () => {
     });
   });
 
+  describe('readURL — alwaysReadable', () => {
+    it('forwards alwaysReadable: true to makeReadable when option is set', async () => {
+      const mockHTML = '<html><body><article><p>Content</p></article></body></html>';
+
+      const { fetchHTML } = await import('../fetcher');
+      vi.mocked(fetchHTML).mockResolvedValue(mockHTML);
+
+      const { makeReadable, makeImgPathsAbsolute, makeLinksAbsolute } = await import('../readable');
+      vi.mocked(makeImgPathsAbsolute).mockReturnValue(mockHTML);
+      vi.mocked(makeLinksAbsolute).mockReturnValue(mockHTML);
+      vi.mocked(makeReadable).mockReturnValue({
+        title: 'Micro',
+        content: '<p>Two words.</p>',
+        textContent: 'Two words.',
+        length: 10,
+        excerpt: '',
+        byline: '',
+        dir: '',
+        siteName: '',
+        lang: '',
+        publishedTime: ''
+      });
+
+      await readURL('https://example.com', { alwaysReadable: true });
+
+      expect(makeReadable).toHaveBeenCalledWith(
+        mockHTML,
+        expect.objectContaining({ alwaysReadable: true })
+      );
+    });
+
+    it('forwards alwaysReadable: undefined to makeReadable when option is absent', async () => {
+      const mockHTML = '<html><body><article><p>Content</p></article></body></html>';
+
+      const { fetchHTML } = await import('../fetcher');
+      vi.mocked(fetchHTML).mockResolvedValue(mockHTML);
+
+      const { makeReadable, makeImgPathsAbsolute, makeLinksAbsolute } = await import('../readable');
+      vi.mocked(makeImgPathsAbsolute).mockReturnValue(mockHTML);
+      vi.mocked(makeLinksAbsolute).mockReturnValue(mockHTML);
+      vi.mocked(makeReadable).mockReturnValue({
+        title: 'Test',
+        content: '<p>Content</p>',
+        textContent: 'Content',
+        length: 7,
+        excerpt: '',
+        byline: '',
+        dir: '',
+        siteName: '',
+        lang: '',
+        publishedTime: ''
+      });
+
+      await readURL('https://example.com');
+
+      expect(makeReadable).toHaveBeenCalledWith(
+        mockHTML,
+        expect.objectContaining({ alwaysReadable: undefined })
+      );
+    });
+
+    it('succeeds when alwaysReadable is true and makeReadable returns a fallback article', async () => {
+      const shortHTML = '<html><head><title>Micro</title></head><body><article><h1>Micro</h1><p>Two words.</p></article></body></html>';
+
+      const { fetchHTML } = await import('../fetcher');
+      vi.mocked(fetchHTML).mockResolvedValue(shortHTML);
+
+      const { makeReadable, makeImgPathsAbsolute, makeLinksAbsolute } = await import('../readable');
+      vi.mocked(makeImgPathsAbsolute).mockReturnValue(shortHTML);
+      vi.mocked(makeLinksAbsolute).mockReturnValue(shortHTML);
+      // With alwaysReadable: true, makeReadable returns a fallback article for short pages
+      vi.mocked(makeReadable).mockReturnValue({
+        title: 'Micro',
+        content: '<article><h1>Micro</h1><p>Two words.</p></article>',
+        textContent: 'Micro Two words.',
+        length: 16,
+        excerpt: '',
+        byline: '',
+        dir: '',
+        siteName: '',
+        lang: '',
+        publishedTime: ''
+      });
+
+      const result = await readURL('https://example.com', { alwaysReadable: true });
+
+      expect(result.title).toBe('Micro');
+      expect(result.markdown).toMatch(/Two words/);
+    });
+
+    it('still throws on pages Readability fails when alwaysReadable is not set', async () => {
+      const shortHTML = '<html><head><title>Micro</title></head><body><article><h1>Micro</h1><p>Two words.</p></article></body></html>';
+
+      const { fetchHTML } = await import('../fetcher');
+      vi.mocked(fetchHTML).mockResolvedValue(shortHTML);
+
+      const { makeReadable, makeImgPathsAbsolute, makeLinksAbsolute } = await import('../readable');
+      vi.mocked(makeImgPathsAbsolute).mockReturnValue(shortHTML);
+      vi.mocked(makeLinksAbsolute).mockReturnValue(shortHTML);
+      // Without alwaysReadable, makeReadable throws for short pages
+      vi.mocked(makeReadable).mockImplementation(() => {
+        throw new Error('Failed to make article readable');
+      });
+
+      await expect(readURL('https://example.com')).rejects.toThrow(/Failed to extract readable content/);
+    });
+  });
+
   describe('ReaderError', () => {
     it('should create error with message and original error', () => {
       const originalError = new Error('Original error');

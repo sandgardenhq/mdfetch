@@ -132,11 +132,31 @@
   - All tests passing, build successful, no linter errors
   - Followed TDD: RED-GREEN-REFACTOR cycle for all new tests
 
+## Task: User-Agent CLI Option - COMPLETE
+- Started: 2026-04-17
+- Tests: 103 passing, 0 failing
+- Coverage: Lines: 93.1%, Functions: 92.85%, Branches: 93.44%, Statements: 92.22%
+- Build: ✅ Successful
+- Linting: ✅ Clean
+- Completed: 2026-04-17
+- Notes:
+  - Strict TDD: RED-GREEN-REFACTOR cycle followed for every change
+  - Replaced hardcoded Firefox-impersonating UA with exported
+    `DEFAULT_USER_AGENT = mdfetch/<pkg.version> (+https://github.com/sandgardenhq/mdfetch)`
+  - Added optional `userAgent?: string` field to `FetchOptions`
+  - Threaded `userAgent` through `fetchWithTimeout` and `fetchHTML`
+  - Verified `readURL` passes the option through transparently
+  - Added `--user-agent <string>` CLI flag (Commander.js)
+  - Added CLI integration tests (local HTTP server + spawn) covering:
+    default UA when flag absent, flag forwarding, and empty-string fallback
+  - Updated README with `--user-agent` flag and default-UA note
+  - Fixed plan doc: corrected integration.test.ts → cli.test.ts references
+
 ## Current Status
 - ✅ Project structure ready
 - ✅ All dependencies optimized (using linkedom instead of jsdom)
 - ✅ Test infrastructure configured
 - ✅ TypeScript configured with strict settings
 - ✅ All coverage thresholds met (90%+)
-- ✅ 95 tests passing across all modules
+- ✅ 103 tests passing across all modules
 - ✅ Build and linting clean

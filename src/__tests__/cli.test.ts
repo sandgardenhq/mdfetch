@@ -158,4 +158,15 @@ describe('--user-agent flag', () => {
 
     expect(userAgent).toBe('custom-bot/1.0');
   }, 30000);
+
+  it('falls back to DEFAULT_USER_AGENT when --user-agent is an empty string', async () => {
+    // Empty string is falsy, so the conditional spread in cli.ts omits the
+    // userAgent key entirely, letting the fetcher's DEFAULT_USER_AGENT apply.
+    const { userAgent } = await runCliAgainstLocalServer([
+      '--user-agent',
+      ''
+    ]);
+
+    expect(userAgent).toBe(DEFAULT_USER_AGENT);
+  }, 30000);
 });

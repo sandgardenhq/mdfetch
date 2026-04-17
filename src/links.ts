@@ -43,6 +43,12 @@ export function extractLinks(html: string): Link[] {
   return out;
 }
 
+export function extractTitle(html: string): string {
+  const { document } = parseHTML(html) as any;
+  const el = document.querySelector('title');
+  return (el?.textContent ?? '').trim();
+}
+
 function escapeBrackets(text: string): string {
   return text.replace(/\[/g, '\\[').replace(/\]/g, '\\]');
 }

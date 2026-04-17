@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { extractLinks, formatAsFootnotes } from '../links.js';
+import { extractLinks, extractTitle, formatAsFootnotes } from '../links.js';
 
 describe('extractLinks', () => {
   it('returns empty array when there are no links', () => {
@@ -98,5 +98,15 @@ describe('formatAsFootnotes', () => {
   it('escapes square brackets in link text', () => {
     expect(formatAsFootnotes([{ url: 'https://a.test/', text: 'foo [bar] baz' }]))
       .toBe('[^1]: [foo \\[bar\\] baz](https://a.test/)');
+  });
+});
+
+describe('extractTitle', () => {
+  it('returns the <title> text trimmed', () => {
+    expect(extractTitle('<html><head><title>  Hi  </title></head></html>')).toBe('Hi');
+  });
+
+  it('returns empty string when <title> is missing', () => {
+    expect(extractTitle('<html><body></body></html>')).toBe('');
   });
 });

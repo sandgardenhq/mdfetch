@@ -581,6 +581,96 @@ describe('reader', () => {
     });
   });
 
+  describe('readURL — allLinks + Readability failure', () => {
+    const linksOnlyHTML = `<html><head><title>Link Farm</title></head><body>
+      <ul>
+        <li><a href="https://a.test/one">One</a></li>
+        <li><a href="https://b.test/two">Two</a></li>
+        <li><a href="mailto:x@y.com">skip</a></li>
+      </ul>
+    </body></html>`;
+
+    it('still throws without allLinks when Readability fails', async () => {
+      const { fetchHTML } = await import('../fetcher');
+      vi.mocked(fetchHTML).mockResolvedValue(linksOnlyHTML);
+
+      const { makeReadable, makeImgPathsAbsolute, makeLinksAbsolute } = await import('../readable');
+      vi.mocked(makeImgPathsAbsolute).mockReturnValue(linksOnlyHTML);
+      vi.mocked(makeLinksAbsolute).mockReturnValue(linksOnlyHTML);
+      vi.mocked(makeReadable).mockImplementation(() => {
+        throw new Error('Failed to make article readable');
+      });
+
+      await expect(readURL('https://example.com')).rejects.toThrow(/Failed to extract readable content/);
+    });
+
+    it('returns a title + footnotes-only result when allLinks is true and Readability fails', async () => {
+      const { fetchHTML } = await import('../fetcher');
+      vi.mocked(fetchHTML).mockResolvedValue(linksOnlyHTML);
+
+      const { makeReadable, makeImgPathsAbsolute, makeLinksAbsolute } = await import('../readable');
+      vi.mocked(makeImgPathsAbsolute).mockReturnValue(linksOnlyHTML);
+      vi.mocked(makeLinksAbsolute).mockReturnValue(linksOnlyHTML);
+      vi.mocked(makeReadable).mockImplementation(() => {
+        throw new Error('Failed to make article readable');
+      });
+
+      const result = await readURL('https://example.com', { allLinks: true });
+
+      expect(result.url).toBe('https://example.com');
+      expect(result.title).toBe('Link Farm');
+      expect(result.readableHTML).toBe('');
+      expect(result.plainText).toBe('');
+      expect(result.markdown).toBe(
+        '# Link Farm\n\n---\n\n' +
+        '[^1]: [One](https://a.test/one)\n' +
+        '[^2]: [Two](https://b.test/two)'
+      );
+      expect(result.excerpt).toBe('');
+      expect(result.byline).toBe('');
+      expect(result.siteName).toBe('');
+      expect(result.lang).toBe('');
+      expect(result.dir).toBe('');
+      expect(result.publishedTime).toBe('');
+      expect(result.length).toBe(0);
+    });
+
+    it('falls back to empty title when <title> is missing and Readability fails', async () => {
+      const html = `<html><body><a href="https://x.test/y">y</a></body></html>`;
+
+      const { fetchHTML } = await import('../fetcher');
+      vi.mocked(fetchHTML).mockResolvedValue(html);
+
+      const { makeReadable, makeImgPathsAbsolute, makeLinksAbsolute } = await import('../readable');
+      vi.mocked(makeImgPathsAbsolute).mockReturnValue(html);
+      vi.mocked(makeLinksAbsolute).mockReturnValue(html);
+      vi.mocked(makeReadable).mockImplementation(() => {
+        throw new Error('Failed to make article readable');
+      });
+
+      const result = await readURL('https://example.com', { allLinks: true });
+      expect(result.title).toBe('');
+      expect(result.markdown.startsWith('# \n\n---\n\n[^1]:')).toBe(true);
+    });
+
+    it('still throws when allLinks is true but no extractable links and Readability fails', async () => {
+      const html = `<html><head><title>Nada</title></head><body><p></p></body></html>`;
+
+      const { fetchHTML } = await import('../fetcher');
+      vi.mocked(fetchHTML).mockResolvedValue(html);
+
+      const { makeReadable, makeImgPathsAbsolute, makeLinksAbsolute } = await import('../readable');
+      vi.mocked(makeImgPathsAbsolute).mockReturnValue(html);
+      vi.mocked(makeLinksAbsolute).mockReturnValue(html);
+      vi.mocked(makeReadable).mockImplementation(() => {
+        throw new Error('Failed to make article readable');
+      });
+
+      await expect(readURL('https://example.com', { allLinks: true }))
+        .rejects.toThrow(/Failed to extract readable content/);
+    });
+  });
+
   describe('ReaderError', () => {
     it('should create error with message and original error', () => {
       const originalError = new Error('Original error');

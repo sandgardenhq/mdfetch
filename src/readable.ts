@@ -177,6 +177,47 @@ export function makeURLAbsolute(tag: string, attr: string, hostname: string, htm
 
 
 /**
+ * Options controlling {@link makeReadable} behavior.
+ */
+export interface MakeReadableOptions {
+    /**
+     * When true, Readability runs with `charThreshold: 1` (Readability coerces
+     * `0` back to the default via `||`, so `1` is the smallest honored value)
+     * and a raw-body fallback article is synthesized if `parse()` still returns
+     * `null`. Best-effort: the fallback produces `{title, content, textContent}`
+     * from `<title>` + `document.body`, not a Readability-scored article.
+     */
+    alwaysReadable?: boolean;
+}
+
+/**
+ * Synthesizes a minimal {@link Article} from a raw DOM when Readability returns null.
+ *
+ * Used only by {@link makeReadable} when `alwaysReadable` is set. Pulls the
+ * `<title>` text (trimmed) and the body's innerHTML/textContent. All other
+ * Article fields are filled with safe defaults.
+ */
+function buildFallbackArticle(document: Document): Article {
+    const titleEl = document.querySelector('title')
+    const title = (titleEl?.textContent ?? '').trim()
+    const body = document.body
+    const content = body?.innerHTML ?? ''
+    const textContent = (body?.textContent ?? '').replace(/\s+/g, ' ').trim()
+    return {
+        title,
+        content,
+        textContent,
+        length: textContent.length,
+        excerpt: '',
+        byline: '',
+        dir: '',
+        siteName: '',
+        lang: '',
+        publishedTime: ''
+    }
+}
+
+/**
  * Extracts readable article content from HTML using Mozilla Readability.
  *
  * This function uses the Readability algorithm to extract the main article
@@ -187,11 +228,16 @@ export function makeURLAbsolute(tag: string, attr: string, hostname: string, htm
  * - Metadata extraction (title, author, published date, etc.)
  * - Text direction and language detection
  * - Fallback handling for malformed HTML entities
+ * - Optional `alwaysReadable` mode that loosens Readability's threshold and
+ *   synthesizes a raw-body fallback article when parsing would otherwise fail.
  *
  * @param html - The raw HTML content to process
+ * @param options - Optional behavior flags (see {@link MakeReadableOptions})
  * @returns Article object with extracted content and metadata
  *
- * @throws {Error} When the article cannot be parsed or lacks sufficient content
+ * @throws {Error} When the article cannot be parsed or lacks sufficient
+ *   content, unless `options.alwaysReadable` is true (in which case a
+ *   fallback article is returned instead).
  *
  * @example
  * ```typescript
@@ -204,7 +250,8 @@ export function makeURLAbsolute(tag: string, attr: string, hostname: string, htm
  * console.log(article.byline);       // Author information
  * ```
  */
-export function makeReadable(html: string): Article | null {
+export function makeReadable(html: string, options: MakeReadableOptions = {}): Article | null {
+    const readabilityOptions: { charThreshold?: number } = options.alwaysReadable ? { charThreshold: 1 } : {}
     let document: Document
     const r: any = parseHTML(html)
     document = r.document
@@ -212,7 +259,7 @@ export function makeReadable(html: string): Article | null {
     let article: null | any = null
     try {
         // extract article using Readability
-        const reader = new Readability(document)
+        const reader = new Readability(document, readabilityOptions)
         article = reader.parse()
     } catch (e) {
         const textarea = document.createElement('textarea')
@@ -220,11 +267,14 @@ export function makeReadable(html: string): Article | null {
         const cleanHTML = textarea.value
 
         const r: any = parseHTML(cleanHTML)
-        const reader = new Readability(r.document)
+        const reader = new Readability(r.document, readabilityOptions)
         article = reader.parse()
     }
-    // catchall -- if we can't parse the article, skip it
+    // catchall -- if we can't parse the article, either fall back or throw
     if (article === null) {
+        if (options.alwaysReadable) {
+            return buildFallbackArticle(document)
+        }
         throw new Error(`Failed to make article readable`)
     }
 

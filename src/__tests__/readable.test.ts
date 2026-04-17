@@ -1,4 +1,20 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
+
+const readabilityCtorSpy = vi.fn();
+vi.mock('@mozilla/readability', async () => {
+  const actual = await vi.importActual<typeof import('@mozilla/readability')>('@mozilla/readability');
+  class SpiedReadability extends (actual.Readability as any) {
+    constructor(doc: any, opts: any) {
+      readabilityCtorSpy(doc, opts);
+      super(doc, opts);
+    }
+  }
+  return {
+    ...actual,
+    Readability: SpiedReadability
+  };
+});
+
 import {
   convertToAbsoluteURL,
   makeImgPathsAbsolute,
@@ -383,6 +399,60 @@ describe('readable', () => {
       expect(result).not.toBeNull();
       expect(result?.title).toContain('Test Article');
       expect(result?.textContent).toContain('entities');
+    });
+  });
+
+  describe('makeReadable — alwaysReadable option', () => {
+    // Page with a <title> but no extractable article — Readability returns null on this.
+    const emptyBodyHTML = `<html><head><title>Nothing Here</title></head><body></body></html>`;
+
+    it('throws on a page Readability cannot parse, by default', () => {
+      expect(() => makeReadable(emptyBodyHTML))
+        .toThrow(/Failed to make article readable/);
+    });
+
+    it('returns a fallback article when alwaysReadable is true and Readability returns null', () => {
+      const article = makeReadable(emptyBodyHTML, { alwaysReadable: true });
+      expect(article).not.toBeNull();
+      expect(article!.title).toBe('Nothing Here');
+      // No content to salvage, but we don't throw:
+      expect(article!.content).toBe('');
+      expect(article!.textContent).toBe('');
+    });
+
+    it('fallback salvages body HTML when Readability returns null but body has content', () => {
+      const html = `<html><head><title>Link Farm</title></head><body>
+        <ul><li><a href="https://a.test/">A</a></li><li><a href="https://b.test/">B</a></li></ul>
+      </body></html>`;
+      const article = makeReadable(html, { alwaysReadable: true });
+      expect(article!.title).toBe('Link Farm');
+      expect(article!.content).toContain('a.test');
+      expect(article!.content).toContain('b.test');
+      expect(article!.textContent).toMatch(/A\s*B/);
+    });
+
+    it('passes charThreshold: 1 to Readability when alwaysReadable is true', () => {
+      readabilityCtorSpy.mockClear();
+      const html = `<html><body><article><h1>Ok</h1><p>${'x'.repeat(600)}</p></article></body></html>`;
+      makeReadable(html, { alwaysReadable: true });
+      expect(readabilityCtorSpy.mock.calls.at(-1)![1]).toEqual({ charThreshold: 1 });
+    });
+
+    it('does NOT pass charThreshold override by default', () => {
+      readabilityCtorSpy.mockClear();
+      const html = `<html><body><article><h1>Ok</h1><p>${'x'.repeat(600)}</p></article></body></html>`;
+      makeReadable(html);
+      expect(readabilityCtorSpy.mock.calls.at(-1)![1]).toEqual({});
+    });
+
+    it('alwaysReadable does not kick in when Readability already returns an article', () => {
+      const html = `<html><head><title>Real</title></head>
+        <body><article><h1>Real</h1><p>${'Lorem ipsum. '.repeat(80)}</p></article></body></html>`;
+      const article = makeReadable(html, { alwaysReadable: true });
+      expect(article!.title).toBe('Real');
+      expect(article!.textContent).toMatch(/Lorem ipsum/);
+      // Should not have been replaced by the raw-body fallback:
+      expect(article!.content).toContain('<p');  // Readability wraps in <p>; body fallback would use <article>
     });
   });
 

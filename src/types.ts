@@ -39,6 +39,10 @@ export interface FetchOptions {
  */
 export interface ReaderOptions extends FetchOptions {
   // Inherits timeout, retries, retryDelay from FetchOptions
+  /** When true, relax Readability's thresholds (charThreshold: 1) and fall back to a raw-body article if parsing still returns null. */
+  alwaysReadable?: boolean;
+  /** When true, extract all qualifying links from the raw page and append as markdown footnotes. */
+  allLinks?: boolean;
 }
 
 /**
@@ -87,6 +91,10 @@ export interface CliOptions {
   timeout?: number;
   /** Number of retry attempts */
   retries?: number;
+  /** Relax Readability thresholds. */
+  alwaysReadable?: boolean;
+  /** Append footnotes for every qualifying link in the raw page. */
+  allLinks?: boolean;
 }
 
 /**

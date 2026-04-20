@@ -402,6 +402,397 @@ describe('reader', () => {
     });
   });
 
+  describe('readURL — alwaysReadable', () => {
+    it('forwards alwaysReadable: true to makeReadable when option is set', async () => {
+      const mockHTML = '<html><body><article><p>Content</p></article></body></html>';
+
+      const { fetchHTML } = await import('../fetcher');
+      vi.mocked(fetchHTML).mockResolvedValue(mockHTML);
+
+      const { makeReadable, makeImgPathsAbsolute, makeLinksAbsolute } = await import('../readable');
+      vi.mocked(makeImgPathsAbsolute).mockReturnValue(mockHTML);
+      vi.mocked(makeLinksAbsolute).mockReturnValue(mockHTML);
+      vi.mocked(makeReadable).mockReturnValue({
+        title: 'Micro',
+        content: '<p>Two words.</p>',
+        textContent: 'Two words.',
+        length: 10,
+        excerpt: '',
+        byline: '',
+        dir: '',
+        siteName: '',
+        lang: '',
+        publishedTime: ''
+      });
+
+      await readURL('https://example.com', { alwaysReadable: true });
+
+      expect(makeReadable).toHaveBeenCalledWith(
+        mockHTML,
+        expect.objectContaining({ alwaysReadable: true })
+      );
+    });
+
+    it('forwards alwaysReadable: undefined to makeReadable when option is absent', async () => {
+      const mockHTML = '<html><body><article><p>Content</p></article></body></html>';
+
+      const { fetchHTML } = await import('../fetcher');
+      vi.mocked(fetchHTML).mockResolvedValue(mockHTML);
+
+      const { makeReadable, makeImgPathsAbsolute, makeLinksAbsolute } = await import('../readable');
+      vi.mocked(makeImgPathsAbsolute).mockReturnValue(mockHTML);
+      vi.mocked(makeLinksAbsolute).mockReturnValue(mockHTML);
+      vi.mocked(makeReadable).mockReturnValue({
+        title: 'Test',
+        content: '<p>Content</p>',
+        textContent: 'Content',
+        length: 7,
+        excerpt: '',
+        byline: '',
+        dir: '',
+        siteName: '',
+        lang: '',
+        publishedTime: ''
+      });
+
+      await readURL('https://example.com');
+
+      expect(makeReadable).toHaveBeenCalledWith(
+        mockHTML,
+        expect.objectContaining({ alwaysReadable: undefined })
+      );
+    });
+
+    it('succeeds when alwaysReadable is true and makeReadable returns a fallback article', async () => {
+      const shortHTML = '<html><head><title>Micro</title></head><body><article><h1>Micro</h1><p>Two words.</p></article></body></html>';
+
+      const { fetchHTML } = await import('../fetcher');
+      vi.mocked(fetchHTML).mockResolvedValue(shortHTML);
+
+      const { makeReadable, makeImgPathsAbsolute, makeLinksAbsolute } = await import('../readable');
+      vi.mocked(makeImgPathsAbsolute).mockReturnValue(shortHTML);
+      vi.mocked(makeLinksAbsolute).mockReturnValue(shortHTML);
+      // With alwaysReadable: true, makeReadable returns a fallback article for short pages
+      vi.mocked(makeReadable).mockReturnValue({
+        title: 'Micro',
+        content: '<article><h1>Micro</h1><p>Two words.</p></article>',
+        textContent: 'Micro Two words.',
+        length: 16,
+        excerpt: '',
+        byline: '',
+        dir: '',
+        siteName: '',
+        lang: '',
+        publishedTime: ''
+      });
+
+      const result = await readURL('https://example.com', { alwaysReadable: true });
+
+      expect(result.title).toBe('Micro');
+      expect(result.markdown).toMatch(/Two words/);
+    });
+
+    it('still throws on pages Readability fails when alwaysReadable is not set', async () => {
+      const shortHTML = '<html><head><title>Micro</title></head><body><article><h1>Micro</h1><p>Two words.</p></article></body></html>';
+
+      const { fetchHTML } = await import('../fetcher');
+      vi.mocked(fetchHTML).mockResolvedValue(shortHTML);
+
+      const { makeReadable, makeImgPathsAbsolute, makeLinksAbsolute } = await import('../readable');
+      vi.mocked(makeImgPathsAbsolute).mockReturnValue(shortHTML);
+      vi.mocked(makeLinksAbsolute).mockReturnValue(shortHTML);
+      // Without alwaysReadable, makeReadable throws for short pages
+      vi.mocked(makeReadable).mockImplementation(() => {
+        throw new Error('Failed to make article readable');
+      });
+
+      await expect(readURL('https://example.com')).rejects.toThrow(/Failed to extract readable content/);
+    });
+  });
+
+  describe('readURL — allLinks (happy path)', () => {
+    it('appends footnotes to markdown when allLinks is true', async () => {
+      const html = `<html><head><title>T</title></head><body>
+        <nav><a href="https://nav.test/home">Home</a></nav>
+        <article><h1>T</h1>
+          <p>Body with <a href="https://inline.test/ref">inline ref</a>.</p>
+        </article>
+        <footer><a href="https://foot.test/about">About</a></footer>
+      </body></html>`;
+
+      const { fetchHTML } = await import('../fetcher');
+      vi.mocked(fetchHTML).mockResolvedValue(html);
+
+      const { makeReadable, makeImgPathsAbsolute, makeLinksAbsolute } = await import('../readable');
+      // makeLinksAbsolute returns the full original HTML (with nav/footer) — this is what
+      // extractLinks should run against, NOT the Readability-trimmed article content.
+      vi.mocked(makeImgPathsAbsolute).mockReturnValue(html);
+      vi.mocked(makeLinksAbsolute).mockReturnValue(html);
+      // Readability trims to just the article body, losing nav/footer links:
+      vi.mocked(makeReadable).mockReturnValue({
+        title: 'T',
+        content: '<h1>T</h1><p>Body with <a href="https://inline.test/ref">inline ref</a>.</p>',
+        textContent: 'T Body with inline ref.',
+        length: 22,
+        excerpt: '',
+        byline: '',
+        dir: '',
+        siteName: '',
+        lang: '',
+        publishedTime: ''
+      });
+
+      const result = await readURL('https://example.com', { allLinks: true });
+
+      // All three URLs from nav/body/footer present — proves extractLinks ran on the
+      // full pre-Readability HTML, not just the trimmed article content:
+      expect(result.markdown).toContain('https://nav.test/home');
+      expect(result.markdown).toContain('https://inline.test/ref');
+      expect(result.markdown).toContain('https://foot.test/about');
+      // Footnote definitions using [^N]: format:
+      expect(result.markdown).toMatch(/\[\^1\]: \[.+?\]\(https:\/\/(nav|inline|foot)\.test\/[^)]+\)/);
+      // Separator between article body and footnotes is exactly \n\n---\n\n:
+      expect(result.markdown).toMatch(/\n\n---\n\n\[\^1\]:/);
+    });
+
+    it('does not append footnotes when allLinks is false/unset', async () => {
+      const html = `<html><body><article><p>Content with <a href="https://x.test/y">link</a></p></article></body></html>`;
+
+      const { fetchHTML } = await import('../fetcher');
+      vi.mocked(fetchHTML).mockResolvedValue(html);
+
+      const { makeReadable, makeImgPathsAbsolute, makeLinksAbsolute } = await import('../readable');
+      vi.mocked(makeImgPathsAbsolute).mockReturnValue(html);
+      vi.mocked(makeLinksAbsolute).mockReturnValue(html);
+      vi.mocked(makeReadable).mockReturnValue({
+        title: 'Test',
+        content: '<p>Content with <a href="https://x.test/y">link</a></p>',
+        textContent: 'Content with link',
+        length: 17,
+        excerpt: '',
+        byline: '',
+        dir: '',
+        siteName: '',
+        lang: '',
+        publishedTime: ''
+      });
+
+      const result = await readURL('https://example.com');
+
+      expect(result.markdown).not.toMatch(/\[\^\d+\]:/);
+    });
+
+    // Covers reader.ts:187 (`if (footnotes)` falsy branch): allLinks:true on
+    // a page with zero extractable links — makeReadable still succeeds and the
+    // final markdown has NO `\n\n---\n\n` divider appended.
+    it('does not append footnote divider when allLinks is true but no links are extractable', async () => {
+      const html = `<html><body><article><p>${'content '.repeat(100)}</p></article></body></html>`;
+
+      const { fetchHTML } = await import('../fetcher');
+      vi.mocked(fetchHTML).mockResolvedValue(html);
+
+      const { makeReadable, makeImgPathsAbsolute, makeLinksAbsolute } = await import('../readable');
+      vi.mocked(makeImgPathsAbsolute).mockReturnValue(html);
+      vi.mocked(makeLinksAbsolute).mockReturnValue(html);
+      vi.mocked(makeReadable).mockReturnValue({
+        title: 'Test',
+        content: '<p>content</p>',
+        textContent: 'content',
+        length: 7,
+        excerpt: '',
+        byline: '',
+        dir: '',
+        siteName: '',
+        lang: '',
+        publishedTime: ''
+      });
+
+      const result = await readURL('https://example.com', { allLinks: true });
+
+      expect(result.markdown).not.toContain('\n\n---\n\n');
+      expect(result.markdown).not.toMatch(/\[\^\d+\]:/);
+    });
+
+    it('leaves readableHTML and plainText untouched when allLinks is true', async () => {
+      const html = `<html><body><article><p>Content with <a href="https://x.test/y">link</a></p></article></body></html>`;
+
+      const { fetchHTML } = await import('../fetcher');
+      vi.mocked(fetchHTML).mockResolvedValue(html);
+
+      const { makeReadable, makeImgPathsAbsolute, makeLinksAbsolute } = await import('../readable');
+      vi.mocked(makeImgPathsAbsolute).mockReturnValue(html);
+      vi.mocked(makeLinksAbsolute).mockReturnValue(html);
+      vi.mocked(makeReadable).mockReturnValue({
+        title: 'Test',
+        content: '<p>Content with <a href="https://x.test/y">link</a></p>',
+        textContent: 'Content with link',
+        length: 17,
+        excerpt: '',
+        byline: '',
+        dir: '',
+        siteName: '',
+        lang: '',
+        publishedTime: ''
+      });
+
+      const result = await readURL('https://example.com', { allLinks: true });
+
+      expect(result.readableHTML).not.toContain('[^1]:');
+      expect(result.plainText).not.toContain('[^1]:');
+    });
+  });
+
+  describe('readURL — allLinks + Readability failure', () => {
+    const linksOnlyHTML = `<html><head><title>Link Farm</title></head><body>
+      <ul>
+        <li><a href="https://a.test/one">One</a></li>
+        <li><a href="https://b.test/two">Two</a></li>
+        <li><a href="mailto:x@y.com">skip</a></li>
+      </ul>
+    </body></html>`;
+
+    it('still throws without allLinks when Readability fails', async () => {
+      const { fetchHTML } = await import('../fetcher');
+      vi.mocked(fetchHTML).mockResolvedValue(linksOnlyHTML);
+
+      const { makeReadable, makeImgPathsAbsolute, makeLinksAbsolute } = await import('../readable');
+      vi.mocked(makeImgPathsAbsolute).mockReturnValue(linksOnlyHTML);
+      vi.mocked(makeLinksAbsolute).mockReturnValue(linksOnlyHTML);
+      vi.mocked(makeReadable).mockImplementation(() => {
+        throw new Error('Failed to make article readable');
+      });
+
+      // Assert the ReaderError was produced via the Task-7 inner-catch rethrow
+      // path (not a pre-Task-7 short-circuit). `originalError` must be the exact
+      // "Failed to make article readable" error we mocked — if some earlier
+      // handler swallowed/wrapped it, this assertion catches that regression.
+      await expect(readURL('https://example.com')).rejects.toMatchObject({
+        name: 'ReaderError',
+        message: expect.stringMatching(/Failed to extract readable content/),
+        originalError: expect.objectContaining({
+          message: 'Failed to make article readable'
+        })
+      });
+    });
+
+    it('returns a title + footnotes-only result when allLinks is true and Readability fails', async () => {
+      const { fetchHTML } = await import('../fetcher');
+      vi.mocked(fetchHTML).mockResolvedValue(linksOnlyHTML);
+
+      const { makeReadable, makeImgPathsAbsolute, makeLinksAbsolute } = await import('../readable');
+      vi.mocked(makeImgPathsAbsolute).mockReturnValue(linksOnlyHTML);
+      vi.mocked(makeLinksAbsolute).mockReturnValue(linksOnlyHTML);
+      vi.mocked(makeReadable).mockImplementation(() => {
+        throw new Error('Failed to make article readable');
+      });
+
+      const result = await readURL('https://example.com', { allLinks: true });
+
+      expect(result.url).toBe('https://example.com');
+      expect(result.title).toBe('Link Farm');
+      expect(result.readableHTML).toBe('');
+      expect(result.plainText).toBe('');
+      expect(result.markdown).toBe(
+        '# Link Farm\n\n---\n\n' +
+        '[^1]: [One](https://a.test/one)\n' +
+        '[^2]: [Two](https://b.test/two)'
+      );
+      expect(result.excerpt).toBe('');
+      expect(result.byline).toBe('');
+      expect(result.siteName).toBe('');
+      expect(result.lang).toBe('');
+      expect(result.dir).toBe('');
+      expect(result.publishedTime).toBe('');
+      expect(result.length).toBe(0);
+    });
+
+    it('falls back to empty title when <title> is missing and Readability fails', async () => {
+      const html = `<html><body><a href="https://x.test/y">y</a></body></html>`;
+
+      const { fetchHTML } = await import('../fetcher');
+      vi.mocked(fetchHTML).mockResolvedValue(html);
+
+      const { makeReadable, makeImgPathsAbsolute, makeLinksAbsolute } = await import('../readable');
+      vi.mocked(makeImgPathsAbsolute).mockReturnValue(html);
+      vi.mocked(makeLinksAbsolute).mockReturnValue(html);
+      vi.mocked(makeReadable).mockImplementation(() => {
+        throw new Error('Failed to make article readable');
+      });
+
+      const result = await readURL('https://example.com', { allLinks: true });
+      expect(result.title).toBe('');
+      expect(result.markdown.startsWith('# \n\n---\n\n[^1]:')).toBe(true);
+    });
+
+    it('still throws when allLinks is true but no extractable links and Readability fails', async () => {
+      const html = `<html><head><title>Nada</title></head><body><p></p></body></html>`;
+
+      const { fetchHTML } = await import('../fetcher');
+      vi.mocked(fetchHTML).mockResolvedValue(html);
+
+      const { makeReadable, makeImgPathsAbsolute, makeLinksAbsolute } = await import('../readable');
+      vi.mocked(makeImgPathsAbsolute).mockReturnValue(html);
+      vi.mocked(makeLinksAbsolute).mockReturnValue(html);
+      vi.mocked(makeReadable).mockImplementation(() => {
+        throw new Error('Failed to make article readable');
+      });
+
+      await expect(readURL('https://example.com', { allLinks: true }))
+        .rejects.toThrow(/Failed to extract readable content/);
+    });
+  });
+
+  describe('readURL — combined alwaysReadable + allLinks', () => {
+    it('forwards alwaysReadable:true to makeReadable AND appends footnotes to markdown', async () => {
+      const html = `<html><head><title>Combined</title></head><body>
+        <nav><a href="https://nav.test/home">Home</a></nav>
+        <article><p>Short body.</p></article>
+        <footer><a href="https://foot.test/about">About</a></footer>
+      </body></html>`;
+
+      const { fetchHTML } = await import('../fetcher');
+      vi.mocked(fetchHTML).mockResolvedValue(html);
+
+      const { makeReadable, makeImgPathsAbsolute, makeLinksAbsolute } = await import('../readable');
+      vi.mocked(makeImgPathsAbsolute).mockReturnValue(html);
+      vi.mocked(makeLinksAbsolute).mockReturnValue(html);
+      // Simulate makeReadable succeeding via its alwaysReadable fallback path.
+      vi.mocked(makeReadable).mockReturnValue({
+        title: 'Combined',
+        content: '<p>Short body.</p>',
+        textContent: 'Short body.',
+        length: 11,
+        excerpt: '',
+        byline: '',
+        dir: '',
+        siteName: '',
+        lang: '',
+        publishedTime: ''
+      });
+
+      const result = await readURL('https://example.com', {
+        alwaysReadable: true,
+        allLinks: true
+      });
+
+      // alwaysReadable flowed through to makeReadable:
+      expect(makeReadable).toHaveBeenCalledWith(
+        html,
+        expect.objectContaining({ alwaysReadable: true })
+      );
+      // Readability produced the body (Turndown renders <p>Short body.</p> → "Short body.")
+      // and allLinks appended footnote DEFINITIONS to the end of markdown.
+      expect(result.markdown).toContain('Short body.');
+      expect(result.markdown).toMatch(/\n\n---\n\n\[\^1\]: /);
+      // Ends with footnote definition block (last non-empty line is a footnote def):
+      expect(result.markdown.trimEnd()).toMatch(/\[\^\d+\]: \[[^\]]*\]\(https:\/\/[^)]+\)$/);
+      // Both nav and footer links are in the footnotes (proves we ran extractLinks
+      // against the FULL pre-Readability HTML, not just the trimmed article content):
+      expect(result.markdown).toContain('https://nav.test/home');
+      expect(result.markdown).toContain('https://foot.test/about');
+    });
+  });
+
   describe('ReaderError', () => {
     it('should create error with message and original error', () => {
       const originalError = new Error('Original error');

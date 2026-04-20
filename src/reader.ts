@@ -36,6 +36,7 @@
 
 import { fetchHTML } from './fetcher.js';
 import { makeReadable, makeImgPathsAbsolute, makeLinksAbsolute } from './readable.js';
+import { extractLinks, extractTitle, formatAsFootnotes } from './links.js';
 import type { ReaderOptions, ConversionResult } from './types.js';
 import TurndownService from 'turndown';
 import { gfm } from 'turndown-plugin-gfm';
@@ -125,8 +126,42 @@ export async function readURL(
     const htmlWithAbsoluteImages = makeImgPathsAbsolute(url, html);
     const htmlWithAbsoluteLinks = makeLinksAbsolute(url, htmlWithAbsoluteImages);
 
-    // Extract readable content
-    const article = makeReadable(htmlWithAbsoluteLinks);
+    // When allLinks is set, extract links ONCE from the full pre-Readability HTML
+    // (so nav/footer/sidebar anchors are preserved). We extract up-front so that
+    // if Readability throws we can still emit a title+footnotes-only result.
+    const shouldCollectLinks = !!options?.allLinks;
+    const preExtractedLinks = shouldCollectLinks
+      ? extractLinks(htmlWithAbsoluteLinks)
+      : [];
+
+    // Extract readable content — may throw. If allLinks produced at least one
+    // link, swallow the throw and emit a title+footnotes-only result instead.
+    let article;
+    try {
+      article = makeReadable(htmlWithAbsoluteLinks, {
+        alwaysReadable: options?.alwaysReadable
+      });
+    } catch (err) {
+      if (shouldCollectLinks && preExtractedLinks.length > 0) {
+        const title = extractTitle(htmlWithAbsoluteLinks);
+        const footnotes = formatAsFootnotes(preExtractedLinks);
+        return {
+          url,
+          title,
+          readableHTML: '',
+          plainText: '',
+          markdown: `# ${title}\n\n---\n\n${footnotes}`,
+          excerpt: '',
+          byline: '',
+          siteName: '',
+          lang: '',
+          dir: '',
+          publishedTime: '',
+          length: 0
+        };
+      }
+      throw err;
+    }
 
     if (!article) {
       throw new Error('Failed to extract article');
@@ -145,12 +180,21 @@ export async function readURL(
 
     const markdown = turndownService.turndown(article.content);
 
+    // Append footnotes to markdown ONLY — readableHTML and plainText stay untouched.
+    let finalMarkdown = markdown;
+    if (shouldCollectLinks) {
+      const footnotes = formatAsFootnotes(preExtractedLinks);
+      if (footnotes) {
+        finalMarkdown = `${markdown}\n\n---\n\n${footnotes}`;
+      }
+    }
+
     return {
       url,
       title: article.title,
       readableHTML: article.content,
       plainText: article.textContent,
-      markdown,
+      markdown: finalMarkdown,
       excerpt: article.excerpt,
       byline: article.byline,
       siteName: article.siteName,

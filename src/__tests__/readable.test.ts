@@ -1,4 +1,45 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+const readabilityCtorSpy = vi.fn();
+/**
+ * Queue of per-call behaviors for the mocked Readability. Each item controls
+ * ONE upcoming `new Readability(...)` invocation:
+ *   - { type: 'real' }     → delegate to the real Readability (default)
+ *   - { type: 'throwCtor' }→ throw from the constructor
+ *   - { type: 'nullParse' }→ construct but make parse() return null
+ * Tests that need to exercise the entity-decode retry path push two items.
+ */
+type ReadabilityBehavior =
+  | { type: 'real' }
+  | { type: 'throwCtor' }
+  | { type: 'nullParse' };
+const readabilityBehaviors: ReadabilityBehavior[] = [];
+
+vi.mock('@mozilla/readability', async () => {
+  const actual = await vi.importActual<typeof import('@mozilla/readability')>('@mozilla/readability');
+  class SpiedReadability {
+    private inner: any;
+    private forceNullParse = false;
+    constructor(doc: any, opts: any) {
+      readabilityCtorSpy(doc, opts);
+      const behavior = readabilityBehaviors.shift() ?? { type: 'real' };
+      if (behavior.type === 'throwCtor') {
+        throw new Error('SpiedReadability: forced constructor throw');
+      }
+      this.inner = new (actual.Readability as any)(doc, opts);
+      this.forceNullParse = behavior.type === 'nullParse';
+    }
+    parse() {
+      if (this.forceNullParse) return null;
+      return this.inner.parse();
+    }
+  }
+  return {
+    ...actual,
+    Readability: SpiedReadability
+  };
+});
+
 import {
   convertToAbsoluteURL,
   makeImgPathsAbsolute,
@@ -10,6 +51,12 @@ import {
 } from '../readable';
 
 describe('readable', () => {
+  beforeEach(() => {
+    // Reset the per-call behavior queue so one test can't leak into another.
+    readabilityBehaviors.length = 0;
+    readabilityCtorSpy.mockClear();
+  });
+
   describe('convertToAbsoluteURL', () => {
     it('should convert relative path to absolute URL', () => {
       const result = convertToAbsoluteURL(
@@ -383,6 +430,107 @@ describe('readable', () => {
       expect(result).not.toBeNull();
       expect(result?.title).toContain('Test Article');
       expect(result?.textContent).toContain('entities');
+    });
+  });
+
+  describe('makeReadable — alwaysReadable option', () => {
+    // Page with a <title> but no extractable article — Readability returns null on this.
+    const emptyBodyHTML = `<html><head><title>Nothing Here</title></head><body></body></html>`;
+
+    it('throws on a page Readability cannot parse, by default', () => {
+      expect(() => makeReadable(emptyBodyHTML))
+        .toThrow(/Failed to make article readable/);
+    });
+
+    it('returns a fallback article when alwaysReadable is true and Readability returns null', () => {
+      const article = makeReadable(emptyBodyHTML, { alwaysReadable: true });
+      expect(article).not.toBeNull();
+      expect(article!.title).toBe('Nothing Here');
+      // No content to salvage, but we don't throw:
+      expect(article!.content).toBe('');
+      expect(article!.textContent).toBe('');
+    });
+
+    it('fallback salvages body HTML when Readability returns null but body has content', () => {
+      const html = `<html><head><title>Link Farm</title></head><body>
+        <ul><li><a href="https://a.test/">A</a></li><li><a href="https://b.test/">B</a></li></ul>
+      </body></html>`;
+      const article = makeReadable(html, { alwaysReadable: true });
+      expect(article!.title).toBe('Link Farm');
+      expect(article!.content).toContain('a.test');
+      expect(article!.content).toContain('b.test');
+      expect(article!.textContent).toMatch(/A\s*B/);
+    });
+
+    it('passes charThreshold: 1 to Readability when alwaysReadable is true', () => {
+      readabilityCtorSpy.mockClear();
+      const html = `<html><body><article><h1>Ok</h1><p>${'x'.repeat(600)}</p></article></body></html>`;
+      makeReadable(html, { alwaysReadable: true });
+      expect(readabilityCtorSpy.mock.calls.at(-1)![1]).toEqual({ charThreshold: 1 });
+    });
+
+    it('does NOT pass charThreshold override by default', () => {
+      readabilityCtorSpy.mockClear();
+      const html = `<html><body><article><h1>Ok</h1><p>${'x'.repeat(600)}</p></article></body></html>`;
+      makeReadable(html);
+      expect(readabilityCtorSpy.mock.calls.at(-1)![1]).toEqual({});
+    });
+
+    it('alwaysReadable does not kick in when Readability already returns an article', () => {
+      const html = `<html><head><title>Real</title></head>
+        <body><article><h1>Real</h1><p>${'Lorem ipsum. '.repeat(80)}</p></article></body></html>`;
+      const article = makeReadable(html, { alwaysReadable: true });
+      expect(article!.title).toBe('Real');
+      expect(article!.textContent).toMatch(/Lorem ipsum/);
+      // Readability wraps its output in <div id="readability-page-1">...; the raw-body
+      // fallback never emits that marker. Asserting on it proves Readability's output
+      // (not the fallback's) is what we got back.
+      expect(article!.content).toContain('readability-page-1');
+    });
+
+    it('entity-decode retry: when first Readability throws and retry returns null with alwaysReadable, fallback still produces a non-null article from the cleaned retry DOM', () => {
+      // Force the catch → retry → returns-null → alwaysReadable-fallback chain:
+      //   1st `new Readability(...)` throws           → enter catch block
+      //   2nd `new Readability(...)` parse()→null     → fall through to fallback
+      //   alwaysReadable:true                         → buildFallbackArticle runs
+      //
+      // NOTE on observability: the fix in readable.ts reassigns the outer `document`
+      // binding to the CLEANED (retry) DOM so buildFallbackArticle sees it, not the
+      // stale original. In a real browser, `textarea.innerHTML=html; textarea.value`
+      // entity-decodes the raw string so the cleaned DOM's body-text differs from the
+      // original's (e.g. `&amp;amp;` → `&amp;` → text `&`). linkedom, however, does
+      // NOT decode via textarea (its textarea.value returns the raw unchanged), so in
+      // THIS environment original and cleaned happen to have identical text. The fix
+      // is still correct and observable in a real DOM; here we verify that the code
+      // path executes without error and that a fallback article is returned.
+      const html = `<html><head><title>Decoded</title></head><body><p>foo &amp;amp; bar</p></body></html>`;
+      readabilityBehaviors.push({ type: 'throwCtor' }, { type: 'nullParse' });
+
+      const article = makeReadable(html, { alwaysReadable: true });
+      expect(article).not.toBeNull();
+      expect(article!.title).toBe('Decoded');
+      // Two Readability ctor invocations — confirms catch block ran the retry:
+      expect(readabilityCtorSpy).toHaveBeenCalledTimes(2);
+      // The fallback's body-derived content is present (proves fallback, not a thrown error):
+      expect(article!.content).toContain('foo');
+      expect(article!.content).toContain('bar');
+    });
+
+    it('entity-decode retry: non-alwaysReadable still throws when both attempts fail', () => {
+      const html = `<html><head><title>X</title></head><body><p>&amp;amp;</p></body></html>`;
+      readabilityBehaviors.push({ type: 'throwCtor' }, { type: 'nullParse' });
+      expect(() => makeReadable(html)).toThrow(/Failed to make article readable/);
+    });
+
+    it('entity-decode retry: successful retry returns the article (covers catch → parse-returns-article path)', () => {
+      // First call throws, second call succeeds with real Readability on a long article.
+      const html = `<html><head><title>Recovered</title></head>
+        <body><article><h1>Recovered</h1><p>${'Lorem ipsum dolor sit amet. '.repeat(60)}</p></article></body></html>`;
+      readabilityBehaviors.push({ type: 'throwCtor' });  // only first call throws
+      const article = makeReadable(html);
+      expect(article).not.toBeNull();
+      expect(article!.title).toBe('Recovered');
+      expect(article!.textContent).toMatch(/Lorem ipsum/);
     });
   });
 

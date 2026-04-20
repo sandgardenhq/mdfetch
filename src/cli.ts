@@ -25,6 +25,7 @@ program
   .option('--retry-delay <ms>', 'Delay between retries in milliseconds', '1000')
   .option('--always-readable', 'Relax Readability thresholds so short/borderline pages still parse')
   .option('--all-links', 'Extract every qualifying link from the raw page and append as markdown footnotes')
+  .option('--user-agent <string>', 'Custom User-Agent header (defaults to mdfetch identifier)')
   .action(async (url: string, options: any) => {
     try {
       // Parse options
@@ -33,7 +34,8 @@ program
         retries: parseInt(options.retries),
         retryDelay: parseInt(options.retryDelay),
         alwaysReadable: !!options.alwaysReadable,
-        allLinks: !!options.allLinks
+        allLinks: !!options.allLinks,
+        ...(options.userAgent ? { userAgent: options.userAgent } : {})
       };
 
       // Check for conflicting flags

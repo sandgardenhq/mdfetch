@@ -35,6 +35,11 @@ describe('Type Definitions', () => {
       const options: FetchOptions = {};
       expect(options).toBeDefined();
     });
+
+    it('FetchOptions accepts a userAgent string', () => {
+      const opts: FetchOptions = { userAgent: 'custom/1.0' };
+      expect(opts.userAgent).toBe('custom/1.0');
+    });
   });
 
   describe('ReaderOptions', () => {

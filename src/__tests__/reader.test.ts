@@ -200,6 +200,36 @@ describe('reader', () => {
       expect(fetchHTML).toHaveBeenCalledWith('https://example.com', options);
     });
 
+    it('forwards userAgent option to fetchHTML', async () => {
+      const mockHTML = '<html><body><article><p>hi</p></article></body></html>';
+
+      const { fetchHTML } = await import('../fetcher');
+      vi.mocked(fetchHTML).mockResolvedValue(mockHTML);
+
+      const { makeReadable, makeImgPathsAbsolute, makeLinksAbsolute } = await import('../readable');
+      vi.mocked(makeImgPathsAbsolute).mockReturnValue(mockHTML);
+      vi.mocked(makeLinksAbsolute).mockReturnValue(mockHTML);
+      vi.mocked(makeReadable).mockReturnValue({
+        title: 'Test',
+        content: '<p>hi</p>',
+        textContent: 'hi',
+        length: 2,
+        excerpt: '',
+        byline: '',
+        dir: '',
+        siteName: '',
+        lang: '',
+        publishedTime: ''
+      });
+
+      await readURL('https://example.com', { userAgent: 'custom/1.0' });
+
+      expect(fetchHTML).toHaveBeenCalledWith(
+        'https://example.com',
+        expect.objectContaining({ userAgent: 'custom/1.0' })
+      );
+    });
+
     it('should throw ReaderError when fetch fails', async () => {
       const { fetchHTML, FetchError } = await import('../fetcher');
 

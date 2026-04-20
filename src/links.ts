@@ -46,7 +46,10 @@ export function extractLinks(html: string): Link[] {
 export function extractTitle(html: string): string {
   const { document } = parseHTML(html) as any;
   const el = document.querySelector('title');
-  return (el?.textContent ?? '').trim();
+  // Collapse interior whitespace so the returned value is safe to use as
+  // single-line markdown (e.g. `# ${title}` heading in the allLinks failure
+  // path) — raw <title> newlines would otherwise break out of the heading.
+  return (el?.textContent ?? '').replace(/\s+/g, ' ').trim();
 }
 
 function escapeBrackets(text: string): string {

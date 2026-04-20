@@ -134,4 +134,14 @@ describe('extractTitle', () => {
   it('returns empty string when <title> is missing', () => {
     expect(extractTitle('<html><body></body></html>')).toBe('');
   });
+
+  // Interior newlines in the raw <title> survive `.trim()`; if we then
+  // interpolate the value into a markdown heading (`# ${title}`) those
+  // newlines break out of the heading and let the page inject further
+  // markdown structure. Collapse to single spaces so the returned title
+  // is safe to use as single-line markdown text.
+  it('collapses interior whitespace (newlines, tabs, multiple spaces)', () => {
+    expect(extractTitle('<html><head><title>Foo\n\nBar</title></head></html>')).toBe('Foo Bar');
+    expect(extractTitle('<html><head><title>\tFoo\t\tBar  Baz\n</title></head></html>')).toBe('Foo Bar Baz');
+  });
 });

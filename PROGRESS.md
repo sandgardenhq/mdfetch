@@ -226,12 +226,33 @@
   - No inline reference rewriting — footnotes are a pure append; the article
     body's existing markdown links are left intact.
 
+## Task 10: Code-review fixes - COMPLETE
+- Started: 2026-04-17
+- Tests: 146 passing, 0 failing (added 1 new extractTitle whitespace-collapse test)
+- Coverage: Statements: 99.31%, Branches: 93.33%, Functions: 95.65%, Lines: 100%
+- Build: ✅ Successful (`npm run build` clean)
+- Linting: ✅ Clean (`npx tsc --noEmit` clean)
+- Completed: 2026-04-17
+- Notes:
+  - **Fix #1 (src/types.ts:40):** corrected the JSDoc on `ReaderOptions.alwaysReadable` from
+    `charThreshold: 0` to `charThreshold: 1` (matches implementation; `0` is coerced back to
+    the default by Readability's `||` operator, so `1` is the smallest honored value). Also
+    appended a note that the option additionally enables the raw-body fallback article.
+    Documentation-only change; no behavioral test needed.
+  - **Fix #2 (src/links.ts `extractTitle`):** interior whitespace now collapses to single
+    spaces (`replace(/\s+/g, ' ').trim()`). Previously `.trim()` alone left interior
+    newlines intact, which broke out of the `# ${title}` heading in `reader.ts` failure-path
+    markdown and let page-controlled title text inject extra headings / footnote defs.
+    Strict TDD: RED test asserted `'Foo\n\nBar'` → `'Foo Bar'` (failed), GREEN after fix.
+  - Readability-success path is unaffected (that path uses Readability-normalized
+    `article.title`, not `extractTitle`).
+
 ## Current Status
 - ✅ Project structure ready
 - ✅ All dependencies optimized (using linkedom instead of jsdom)
 - ✅ Test infrastructure configured
 - ✅ TypeScript configured with strict settings
 - ✅ All coverage thresholds met (90%+)
-- ✅ 143 tests passing across all modules
+- ✅ 146 tests passing across all modules
 - ✅ Build and linting clean
 - ✅ `--always-readable` and `--all-links` feature shipped and documented

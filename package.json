@@ -1,5 +1,5 @@
 {
-  "name": "mdfetch",
+  "name": "@sandgarden/mdfetch",
   "version": "1.0.0",
   "description": "CLI tool to convert web pages to clean markdown",
   "type": "module",

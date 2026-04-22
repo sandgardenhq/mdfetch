@@ -19,7 +19,7 @@ Convert any web article into clean markdown with a single command. Uses Mozilla'
 ### Global Installation (Recommended)
 
 ```bash
-npm install -g mdfetch
+npm install -g @sandgarden/mdfetch
 ```
 
 This installs the `mdfetch` command globally.
@@ -27,7 +27,7 @@ This installs the `mdfetch` command globally.
 ### Local Installation
 
 ```bash
-npm install mdfetch
+npm install @sandgarden/mdfetch
 ```
 
 Then use via npx:
@@ -192,7 +192,7 @@ mdfetch https://example.com/article | less
 You can also use `mdfetch` as a library in your Node.js projects:
 
 ```typescript
-import { readURL } from 'mdfetch';
+import { readURL } from '@sandgarden/mdfetch';
 
 // Fetch and convert a URL
 const result = await readURL('https://example.com/article');

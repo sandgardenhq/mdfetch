@@ -25,7 +25,7 @@
     "web-scraping",
     "content-extraction"
   ],
-  "author": "",
+  "author": "Sandgarden, Inc.",
   "license": "MIT",
   "engines": {
     "node": ">=18.0.0"

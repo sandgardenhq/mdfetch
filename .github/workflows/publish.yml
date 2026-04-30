@@ -2,6 +2,8 @@ name: Publish to NPM
 
 on:
   push:
+    branches:
+      - main
     tags:
       - 'v*'
   workflow_dispatch:
@@ -42,7 +44,7 @@ jobs:
       - run: npm run build
 
       - name: Verify tag matches package.json version
-        if: github.event_name == 'push'
+        if: startsWith(github.ref, 'refs/tags/v')
         run: |
           PKG_VERSION="v$(node -p "require('./package.json').version")"
           TAG_VERSION="${GITHUB_REF_NAME}"
@@ -51,6 +53,22 @@ jobs:
             exit 1
           fi
 
-      - run: npm publish --access public
+      - name: Check if version already published
+        id: version_check
+        run: |
+          PKG_NAME=$(node -p "require('./package.json').name")
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          echo "Checking $PKG_NAME@$PKG_VERSION"
+          if npm view "$PKG_NAME@$PKG_VERSION" version > /dev/null 2>&1; then
+            echo "Version $PKG_VERSION already published — skipping."
+            echo "should_publish=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Version $PKG_VERSION is new — will publish."
+            echo "should_publish=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Publish to NPM
+        if: steps.version_check.outputs.should_publish == 'true'
+        run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

@@ -74,19 +74,15 @@ function liftFigureOutOfEmptyWrappers(fig: any): void {
   // would otherwise take the figure down with them.
   while (true) {
     const parent = fig.parentNode;
-    if (!parent || parent.nodeType !== 1) return;
     const tag = (parent.tagName || '').toUpperCase();
     if (!LIFTABLE_TAGS.has(tag)) return;
-    for (const sibling of Array.from(parent.children || []) as any[]) {
+    for (const sibling of Array.from(parent.children) as any[]) {
       if (sibling === fig) continue;
       if (isEmptyDecorative(sibling)) parent.removeChild(sibling);
     }
-    const childElements = parent.children || [];
-    if (childElements.length !== 1) return;
+    if (parent.children.length !== 1) return;
     if ((parent.textContent || '').trim() !== '') return;
-    const grandparent = parent.parentNode;
-    if (!grandparent) return;
-    grandparent.replaceChild(fig, parent);
+    parent.parentNode.replaceChild(fig, parent);
   }
 }
 
@@ -94,10 +90,8 @@ function wrapImagesInFigure(document: Document): void {
   const imgs = Array.from(document.querySelectorAll('img')) as any[];
   for (const img of imgs) {
     if (shouldSkipImage(img)) continue;
-    const parent = img.parentNode;
-    if (!parent) continue;
     const fig = document.createElement('figure');
-    parent.replaceChild(fig, img);
+    img.parentNode.replaceChild(fig, img);
     fig.appendChild(img);
     liftFigureOutOfEmptyWrappers(fig);
   }

@@ -101,6 +101,28 @@ describe('CLI Integration', () => {
     expect(result).toContain('Extract every qualifying link');
   });
 
+  it('should accept --wrap-images flag', () => {
+    const result = execSync('tsx src/cli.ts --help', { encoding: 'utf-8' });
+
+    expect(result).toContain('--wrap-images');
+  });
+
+  it('should recognize --wrap-images at parse time (smoke)', () => {
+    try {
+      execSync('tsx src/cli.ts --wrap-images', {
+        encoding: 'utf-8',
+        stdio: 'pipe'
+      });
+      expect.fail('Should have thrown an error for missing URL');
+    } catch (error: any) {
+      expect(error.status).not.toBe(0);
+      const stderr = error.stderr.toString();
+      // If the flag weren't registered, commander would say "unknown option".
+      expect(stderr).not.toContain('unknown option');
+      expect(stderr).toContain('missing required argument');
+    }
+  });
+
   it('should allow --always-readable and --all-links together', () => {
     // Smoke: invoking with both flags against a missing URL still fails for
     // "missing required argument" reasons, not for unknown-option reasons.

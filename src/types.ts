@@ -43,6 +43,8 @@ export interface ReaderOptions extends FetchOptions {
   alwaysReadable?: boolean;
   /** When true, extract all qualifying links from the raw page and append as markdown footnotes. */
   allLinks?: boolean;
+  /** When true, run a DOM preprocess pass that wraps content `<img>` tags in `<figure>` so Readability scores them as content (preserves images on docs sites that wrap them in span/div containers). Default: false. */
+  wrapImages?: boolean;
 }
 
 /**

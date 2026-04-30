@@ -267,13 +267,44 @@
   - Updated README with `--user-agent` flag and default-UA note
   - Fixed plan doc: corrected integration.test.ts → cli.test.ts references
 
+## Task: --wrap-images Flag (Mintlify-style image preservation) - COMPLETE
+- Started: 2026-04-30
+- Tests: 187 passing, 0 failing
+- Coverage (preprocess.ts): Lines 100%, Funcs 100%, Branches 88.88%, Statements 100%
+- Build: ✅ tsc clean
+- Completed: 2026-04-30
+- Motivation: Bun docs (https://bun.com/docs/guides/runtime/web-debugger)
+  and other Mintlify-style sites wrap content `<img>` tags in nested
+  `<span>` chains inside divs whose class names match Readability's
+  negative-weight regex (`overflow-hidden` matches `/hidden/`, weight=-25).
+  Readability's `_cleanConditionally` then drops the wrapper, taking the
+  image with it. Result: 0 markdown image refs even when the page has 7
+  meaningful screenshots.
+- Strict TDD on every step (RED → verify failure → GREEN → REFACTOR → commit):
+  1. Saved live page as `test/fixtures/bun-debugger.html`
+  2. `<span data-as="p">` → `<p>` promotion (Mintlify hint)
+  3. Wrap qualifying `<img>` in `<figure>`. Skip rules: ancestor in
+     `<nav>`/`<header>`/`<aside>`/`<footer>`; img/ancestor class matches
+     `\b(logo|icon|avatar|sprite)\b`; parent already `<figure>`/`<picture>`
+  4. Lift `<figure>` up past empty span/div/p wrappers, also stripping
+     empty decorative siblings (overlays, dividers) so the figure escapes
+     negative-weight wrapping divs before Readability sees it
+  5. New `wrapImages?: boolean` field on `ReaderOptions` (default off)
+  6. `--wrap-images` CLI flag threaded through to `readURL`
+- New module: `src/preprocess.ts` (entirely TDD'd, 100% line coverage)
+- New test file: `src/__tests__/wrapImages.test.ts` (integration test using
+  saved Bun fixture + local HTTP server). Asserts that with the flag on,
+  all 7 GitHub-hosted screenshots end up as `![alt](url)` markdown image
+  refs. With the flag off, the existing pipeline behavior is unchanged.
+
 ## Current Status
 - ✅ Project structure ready
 - ✅ All dependencies optimized (using linkedom instead of jsdom)
 - ✅ Test infrastructure configured
 - ✅ TypeScript configured with strict settings
 - ✅ All coverage thresholds met (90%+)
-- ✅ 146+ tests passing across all modules
+- ✅ 187 tests passing across all modules
 - ✅ Build and linting clean
 - ✅ `--always-readable` and `--all-links` feature shipped and documented
 - ✅ `--user-agent` flag shipped and documented
+- ✅ `--wrap-images` flag shipped (Mintlify-style image preservation)

@@ -52,6 +52,44 @@ function shouldSkipImage(img: any): boolean {
   return false;
 }
 
+const LIFTABLE_TAGS = new Set(['SPAN', 'DIV', 'P']);
+const MEANINGFUL_DESCENDANT_TAGS = ['img', 'figure', 'picture', 'svg', 'video', 'iframe', 'audio'];
+
+function isEmptyDecorative(el: any): boolean {
+  if ((el.textContent || '').trim() !== '') return false;
+  const ownTag = (el.tagName || '').toLowerCase();
+  if (MEANINGFUL_DESCENDANT_TAGS.includes(ownTag)) return false;
+  for (const tag of MEANINGFUL_DESCENDANT_TAGS) {
+    if (el.querySelector && el.querySelector(tag)) return false;
+  }
+  return true;
+}
+
+function liftFigureOutOfEmptyWrappers(fig: any): void {
+  // Move `fig` up the tree as long as its parent is a span/div/p that, after
+  // stripping empty decorative siblings (overlays, dividers, etc.), contains
+  // only this figure and no significant text. This escapes wrapper chains
+  // Readability would otherwise prune — most notably divs whose class names
+  // match Readability's negative-weight regex (e.g. `overflow-hidden`), which
+  // would otherwise take the figure down with them.
+  while (true) {
+    const parent = fig.parentNode;
+    if (!parent || parent.nodeType !== 1) return;
+    const tag = (parent.tagName || '').toUpperCase();
+    if (!LIFTABLE_TAGS.has(tag)) return;
+    for (const sibling of Array.from(parent.children || []) as any[]) {
+      if (sibling === fig) continue;
+      if (isEmptyDecorative(sibling)) parent.removeChild(sibling);
+    }
+    const childElements = parent.children || [];
+    if (childElements.length !== 1) return;
+    if ((parent.textContent || '').trim() !== '') return;
+    const grandparent = parent.parentNode;
+    if (!grandparent) return;
+    grandparent.replaceChild(fig, parent);
+  }
+}
+
 function wrapImagesInFigure(document: Document): void {
   const imgs = Array.from(document.querySelectorAll('img')) as any[];
   for (const img of imgs) {
@@ -61,6 +99,7 @@ function wrapImagesInFigure(document: Document): void {
     const fig = document.createElement('figure');
     parent.replaceChild(fig, img);
     fig.appendChild(img);
+    liftFigureOutOfEmptyWrappers(fig);
   }
 }
 

@@ -135,4 +135,48 @@ describe('preprocessForReadability — img wrapping in <figure>', () => {
     const out = preprocessForReadability(html);
     expect((out.match(/<figure><img/g) || []).length).toBe(2);
   });
+
+  it('lifts the figure out of an otherwise-empty span/div/p wrapper chain', () => {
+    const html = '<html><body><main><div><p><span><span><img src="/a.jpg" alt="x"></span></span></p></div></main></body></html>';
+    const out = preprocessForReadability(html);
+    expect(out).toMatch(/<main><figure><img[^>]+src="\/a\.jpg"[^>]*><\/figure><\/main>/);
+  });
+
+  it('does not lift past a wrapper that has sibling text', () => {
+    const html = '<html><body><main><p>caption text <img src="/a.jpg" alt="x"></p></main></body></html>';
+    const out = preprocessForReadability(html);
+    expect(out).toMatch(/<p>caption text <figure><img[^>]+src="\/a\.jpg"[^>]*><\/figure><\/p>/);
+  });
+
+  it('does not lift past a wrapper that has sibling element children', () => {
+    const html = '<html><body><main><div><img src="/a.jpg" alt="x"><span>more</span></div></main></body></html>';
+    const out = preprocessForReadability(html);
+    expect(out).toMatch(/<div><figure><img[^>]+src="\/a\.jpg"[^>]*><\/figure><span>more<\/span><\/div>/);
+  });
+
+  it('lifts past a div whose class would normally be pruned by Readability (overflow-hidden)', () => {
+    const html = '<html><body><main><div class="relative overflow-hidden"><span><img src="/a.jpg" alt="x"></span></div></main></body></html>';
+    const out = preprocessForReadability(html);
+    expect(out).toMatch(/<main><figure><img[^>]+src="\/a\.jpg"[^>]*><\/figure><\/main>/);
+  });
+
+  it('lifts past wrappers whose only other children are empty decorative elements', () => {
+    const html = '<html><body><main><div class="overflow-hidden"><div class="bg-overlay"></div><span><img src="/a.jpg" alt="x"></span><div class="border-overlay"></div></div></main></body></html>';
+    const out = preprocessForReadability(html);
+    expect(out).toMatch(/<main><figure><img[^>]+src="\/a\.jpg"[^>]*><\/figure><\/main>/);
+  });
+
+  it('does not strip a sibling that contains text', () => {
+    const html = '<html><body><main><div><span>caption</span><img src="/a.jpg" alt="x"></div></main></body></html>';
+    const out = preprocessForReadability(html);
+    expect(out).toContain('<span>caption</span>');
+    expect(out).toContain('<figure>');
+  });
+
+  it('does not strip a sibling that contains its own image', () => {
+    const html = '<html><body><main><div><div><img src="/sibling.jpg" alt="s"></div><img src="/a.jpg" alt="x"></div></main></body></html>';
+    const out = preprocessForReadability(html);
+    expect(out).toContain('src="/sibling.jpg"');
+    expect(out).toContain('src="/a.jpg"');
+  });
 });

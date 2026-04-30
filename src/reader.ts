@@ -37,6 +37,7 @@
 import { fetchHTML } from './fetcher.js';
 import { makeReadable, makeImgPathsAbsolute, makeLinksAbsolute } from './readable.js';
 import { extractLinks, extractTitle, formatAsFootnotes } from './links.js';
+import { preprocessForReadability } from './preprocess.js';
 import type { ReaderOptions, ConversionResult } from './types.js';
 import TurndownService from 'turndown';
 import { gfm } from 'turndown-plugin-gfm';
@@ -124,7 +125,10 @@ export async function readURL(
 
     // Make image and link paths absolute
     const htmlWithAbsoluteImages = makeImgPathsAbsolute(url, html);
-    const htmlWithAbsoluteLinks = makeLinksAbsolute(url, htmlWithAbsoluteImages);
+    const htmlWithAbsoluteLinksRaw = makeLinksAbsolute(url, htmlWithAbsoluteImages);
+    const htmlWithAbsoluteLinks = options?.wrapImages
+      ? preprocessForReadability(htmlWithAbsoluteLinksRaw)
+      : htmlWithAbsoluteLinksRaw;
 
     // When allLinks is set, extract links ONCE from the full pre-Readability HTML
     // (so nav/footer/sidebar anchors are preserved). We extract up-front so that

@@ -25,6 +25,7 @@ program
   .option('--retry-delay <ms>', 'Delay between retries in milliseconds', '1000')
   .option('--always-readable', 'Relax Readability thresholds so short/borderline pages still parse')
   .option('--all-links', 'Extract every qualifying link from the raw page and append as markdown footnotes')
+  .option('--wrap-images', 'Wrap content <img> tags in <figure> so Readability keeps them (helps on docs sites that wrap images in styling spans)')
   .option('--user-agent <string>', 'Custom User-Agent header (defaults to mdfetch identifier)')
   .action(async (url: string, options: any) => {
     try {
@@ -35,6 +36,7 @@ program
         retryDelay: parseInt(options.retryDelay),
         alwaysReadable: !!options.alwaysReadable,
         allLinks: !!options.allLinks,
+        wrapImages: !!options.wrapImages,
         ...(options.userAgent ? { userAgent: options.userAgent } : {})
       };
 

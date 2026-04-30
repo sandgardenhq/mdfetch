@@ -16,7 +16,7 @@
   "plugin": [],
   "name": "mdfetch API Documentation",
   "navigationLinks": {
-    "GitHub": "https://github.com/anthropics/mdfetch"
+    "GitHub": "https://github.com/sandgardenhq/mdfetch"
   },
   "sort": ["source-order"],
   "categorizeByGroup": true,

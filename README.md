@@ -16,7 +16,13 @@ Convert any web article into clean markdown with a single command. Uses Mozilla'
 
 ## Installation
 
-### Global Installation (Recommended)
+### Homebrew (macOS / Linux)
+
+```bash
+brew install sandgardenhq/tap/mdfetch
+```
+
+### Global Installation (npm)
 
 ```bash
 npm install -g @sandgarden/mdfetch
